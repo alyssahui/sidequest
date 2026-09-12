@@ -8,6 +8,7 @@ import {
   demoPrincipal,
 } from "./foundation/demoAdapters";
 import { registerLocationModule } from "./modules/location";
+import { createQuestGpsEvidenceService } from "./modules/location/questGpsAdapter";
 import { challengeRoutes } from "./modules/challenges/routes";
 import { createDemoQuestRuntime } from "./modules/quests/demo";
 import { questRoutes } from "./modules/quests/routes";
@@ -40,12 +41,25 @@ export function buildApp() {
   );
   const economy = new LedgerEconomyAdapter(marketLedger);
   const bounties = new SelfBountyService(marketLedger, clock, ids);
+  // Location owns its own routes, storage, and retention timer, and is built
+  // before the quest runtime because quest GPS verification is backed by it.
+  const location = registerLocationModule(app, {
+    events,
+    memberships,
+    clock,
+    ids,
+    startRetentionSweep: process.env.NODE_ENV !== "test",
+  });
+
   const questRuntime = createDemoQuestRuntime({
     clock,
     ids,
     economy,
     events,
     memberships,
+    // Verification now evaluates the reading the location module stored and
+    // validated, rather than trusting coordinates posted in the request body.
+    gps: createQuestGpsEvidenceService({ service: location.service }),
   });
   const demoQuestServices = questRuntime.services;
 
@@ -90,18 +104,32 @@ export function buildApp() {
     service: questRuntime.challengeService,
   });
 
-  // Location owns its own routes, storage, and retention timer. It exposes
-  // `gpsEvidence` for quest verification to consume in-process.
-  const location = registerLocationModule(app, {
-    events: demoQuestServices.events,
-    memberships: demoQuestServices.memberships,
-    clock: demoQuestServices.clock,
-    ids: demoQuestServices.ids,
-    startRetentionSweep: process.env.NODE_ENV !== "test",
-  });
-
   app.addHook("onClose", async () => {
     location.stop();
+  });
+
+  // A resolved quest settles its prediction. Delivery is at-least-once, so the
+  // event id is the idempotency key and a re-delivery is a no-op.
+  events.on("quest.resolved", async (event) => {
+    const payload = event.payload as { questId?: string; status?: string };
+    if (!payload.questId) return;
+    if (payload.status !== "VERIFIED" && payload.status !== "FAILED") return;
+
+    await markets.settleFromQuest({
+      eventId: event.id,
+      questInstanceId: payload.questId,
+      outcome: payload.status === "VERIFIED" ? "COMPLETE" : "FAIL",
+    });
+  });
+
+  // Location stops collecting once the quest that justified it is over.
+  events.on("quest.resolved", async (event) => {
+    const payload = event.payload as { questId?: string };
+    if (!payload.questId) return;
+    await location.service.stopSessionsFor(
+      { type: "QUEST_RESOLVED", questInstanceId: payload.questId },
+      { userId: event.actorUserId ?? "" },
+    );
   });
 
   app.register(async (marketApp) => {

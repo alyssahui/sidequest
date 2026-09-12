@@ -154,10 +154,20 @@ export type ImpactSummary = {
 };
 export interface QuestGpsEvidenceService {
   evaluate(input: {
+    /**
+     * The reading the client submitted.
+     *
+     * An implementation backed by server-stored evidence should prefer its own
+     * record and treat this as a fallback — a client can claim any position.
+     */
     evidence: GpsEvidence;
     target: QuestCoordinates;
     radiusMeters: number;
     maxAccuracyMeters: number;
     serverNow: string;
+    /** Who is claiming arrival. Optional so simple implementations can ignore it. */
+    userId?: string;
+    /** Which quest the claim is for. */
+    questInstanceId?: string;
   }): Promise<{ accepted: boolean; code: string; distanceMeters?: number }>;
 }

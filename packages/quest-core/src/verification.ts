@@ -40,16 +40,15 @@ export class VerificationRegistry {
         continue;
       }
       if (requirement.type === "GPS") {
-        if (!evidence.gps) {
-          checks.push({ type: "GPS", decision: "FAILED", code: "GPS_MISSING" });
-          continue;
-        }
+        if (!evidence.gps) throw new QuestError("INVALID_EVIDENCE");
         const result = await this.gps.evaluate({
           evidence: evidence.gps,
           target: requirement.target,
           radiusMeters: requirement.radiusMeters,
           maxAccuracyMeters: requirement.maxAccuracyMeters,
           serverNow: now,
+          userId,
+          questInstanceId: questId,
         });
         checks.push({
           type: "GPS",
@@ -58,14 +57,7 @@ export class VerificationRegistry {
         });
         continue;
       }
-      if (!evidence.photo) {
-        checks.push({
-          type: "PHOTO",
-          decision: "FAILED",
-          code: "PHOTO_MISSING",
-        });
-        continue;
-      }
+      if (!evidence.photo) throw new QuestError("INVALID_EVIDENCE");
       if (!/^media:\/\/[a-zA-Z0-9/_-]{1,180}$/.test(evidence.photo.mediaRef))
         throw new QuestError("PHOTO_REFERENCE_UNSAFE");
       const review = await this.photos.inspectReference(

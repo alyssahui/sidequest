@@ -67,9 +67,29 @@ export class InMemoryEconomy implements EconomyPort {
   }
 }
 
+export type DomainEventHandler = (event: DomainEvent) => void | Promise<void>;
+
 export class InMemoryEventBus implements EventPublisher {
   readonly events: DomainEvent[] = [];
   readonly feed: FeedEvent[] = [];
+
+  readonly #handlers = new Map<string, Set<DomainEventHandler>>();
+
+  /**
+   * Subscribes to one event type. Returns an unsubscribe function.
+   *
+   * Delivery is at-least-once by contract, so handlers must be idempotent —
+   * the market settlement consumer keys off the event id for exactly that
+   * reason.
+   */
+  on(type: string, handler: DomainEventHandler): () => void {
+    const handlers = this.#handlers.get(type) ?? new Set<DomainEventHandler>();
+    handlers.add(handler);
+    this.#handlers.set(type, handlers);
+    return () => {
+      handlers.delete(handler);
+    };
+  }
 
   async publish(event: DomainEvent) {
     if (this.events.some((existing) => existing.id === event.id)) return;
@@ -81,5 +101,14 @@ export class InMemoryEventBus implements EventPublisher {
       title: event.type.replaceAll(".", " "),
       detail: "Deterministic demo event",
     });
+
+    for (const handler of this.#handlers.get(event.type) ?? []) {
+      try {
+        await handler(event);
+      } catch {
+        // A consumer must never break the producer's transaction. Real delivery
+        // is an outbox; here a failed handler is dropped rather than retried.
+      }
+    }
   }
 }

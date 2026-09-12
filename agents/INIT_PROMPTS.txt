@@ -1,0 +1,278 @@
+# SideQuest — Technical Plan & Design Agent Prompt
+
+This document has two parts:
+
+1. **Technical Plan** — architecture, data model, core flows, and phased build order, written so any engineer or design agent can pick it up cold.
+2. **Agent Prompt** — a ready-to-paste prompt for a design/coding agent (Claude Code, Figma agent, v0, etc.) to execute the first design/build pass, with explicit emphasis on clean structure and room for iteration.
+
+---
+
+## PART 1 — TECHNICAL PLAN
+
+### 1. Product Summary
+
+SideQuest turns real-world life into a multiplayer game. Friends form a **Party**, complete real-world **SideQuests**, issue **Challenges**, bet virtual **Coins** on outcomes, get quests **adaptively spawned** based on context, and coordinate large group efforts called **Boss Raids**.
+
+**Tone target:** game HUD + social feed + live map. Not a to-do app. Every interaction should feel like a game event firing, not a task being logged.
+
+**Five primary nav areas:** `MAP · QUESTS · PARTY · FEED · PROFILE`, with MAP as the default/home screen.
+
+### 2. Design Principles (carry through every phase)
+
+- **Clarity over density.** Game HUDs feel exciting because they surface one clear signal at a time (a spawn, a challenge, a bet). Never let the UI collapse into a generic list-of-cards app.
+- **Separation of concerns from day one.** Quest *content* (templates), quest *instances* (spawned/accepted), *economy* (coins/bets), and *verification* (GPS/photo/time) must be independent systems that compose, not one monolithic "Quest" object with 40 optional fields.
+- **Everything is themeable and extensible.** New quest types, new verification types, new HUD element styles, and new Raid formats should be addable via configuration/data, not by rewriting core logic.
+- **Design for a second pass.** Naming, folder structure, and component boundaries should assume a designer or future agent will come back and re-skin or extend this. No throwaway hacks in the scaffolding layer, even in early prototypes.
+
+### 3. Recommended Tech Stack
+
+| Layer | Recommendation | Why |
+|---|---|---|
+| Mobile client | React Native + Expo | Fast iteration, good map/geofencing libraries, single codebase for iOS/Android |
+| Map | Mapbox GL (via `@rnmapbox/maps`) | Custom marker styling needed for "game-like" quest markers; more flexible than Google Maps SDK for this |
+| State/data fetching | React Query + Zustand (or Redux Toolkit) | React Query for server state/cache, Zustand for lightweight local/UI state (HUD animations, active screen) |
+| Realtime | WebSockets (Socket.IO or native WS) or Supabase Realtime | Needed for live feed, live bets, live proximity events |
+| Backend | Node.js (NestJS or Fastify) | Structured, modular backend that maps cleanly to the domain services below |
+| Database | PostgreSQL | Relational integrity matters a lot here (coins ledger, bets, party membership) |
+| Geospatial | PostGIS extension | Needed for "nearby quests," proximity detection, geofencing queries |
+| Push notifications | Expo Notifications / FCM+APNs | Quest spawns, challenges, bet results need to interrupt |
+| Image verification (optional/later) | Cloud vision API (e.g., a hosted image-classification endpoint) called from a `VerificationService` | Keep this behind an interface so it can be swapped/mocked in MVP |
+| Auth | Managed auth (Clerk/Auth0) or custom JWT | Not the interesting part of this product — don't over-invest early |
+| Background location | Expo Location (background mode) + geofencing | Needed for GPS verification and proximity-triggered spawns |
+
+This stack is a recommendation, not a constraint — the important thing for the agent is the **service boundaries** below, which should hold regardless of stack.
+
+### 4. Core Domain Services (backend)
+
+Keep these as distinct modules/services with clean interfaces, even in an early build:
+
+1. **IdentityService** — users, auth, profile preferences (likes / want-to-try / need-to-do / quest style slider / social preference).
+2. **PartyService** — party creation/membership, roles, party stats aggregation.
+3. **QuestCatalogService** — quest *templates* (the abstract "try a new food," "go to the gym") — reusable, taggable by interest/category/verification type.
+4. **QuestSpawningService** — the adaptive engine. Takes user context (location, time, interests, nearby party members, history) → produces **QuestInstances**. This is the most important service to keep isolated, since spawning logic will be iterated on constantly.
+5. **QuestInstanceService** — lifecycle of an individual spawned/accepted quest (pending → accepted → in-progress → verified/failed/expired).
+6. **VerificationService** — pluggable verification strategies: `GPSVerifier`, `PhotoVerifier`, `TimeVerifier`, composable (e.g., GPS+Time). New verification types register into this interface without touching quest logic.
+7. **ChallengeService** — peer-to-peer challenge issuance, accept/decline, outcome resolution → feeds into the economy.
+8. **EconomyService** — the coin ledger. All coin changes (rewards, bets, self-bounties, challenge stakes) go through one ledger table with transaction types. Never mutate a "coins" number directly on the user record from multiple places.
+9. **BettingService** — bet placement, pool calculation, payout resolution when a quest/challenge resolves. Depends on EconomyService for settlement.
+10. **RaidService** — Boss Raid creation, task breakdown, per-member task assignment, progress aggregation.
+11. **FeedService** — event log / activity feed. Every meaningful action (quest completed, bet won, challenge issued, raid created) emits a `FeedEvent`. Feed is a read model over these events, not hand-built per feature.
+12. **ProximityService** — detects when Party members are geographically co-located; triggers multiplayer quest spawns via QuestSpawningService.
+13. **NotificationService** — dispatches push/local notifications for spawns, challenges, bet resolutions, raid updates.
+
+**Key architectural rule:** FeedEvent should be the single source of truth that ties everything together — Quest, Challenge, Betting, and Raid services all *emit* events into the feed rather than the feed querying each service ad hoc. This keeps the feed simple and keeps new feature types (future: "Duels," "Seasons," etc.) trivial to plug in later.
+
+### 5. Data Model (core entities)
+
+```
+User
+ - id, display_name, avatar_url
+ - coins_balance (derived/cached from ledger, not source of truth)
+ - profile: { likes[], want_to_try[], need_to_do[], quest_style (0-100), social_pref (solo/friends/either) }
+
+Party
+ - id, name, created_by
+PartyMembership
+ - party_id, user_id, role, joined_at
+
+QuestTemplate
+ - id, title, description, category/tags[]
+ - default_verification: [GPS | PHOTO | TIME | combinations]
+ - default_reward_range
+ - spawn_conditions (interest tags, location type, time-of-day, etc.)
+
+QuestInstance
+ - id, template_id (nullable — can be fully custom), party_id/user_id
+ - status: SPAWNED | ACCEPTED | IN_PROGRESS | VERIFIED | FAILED | EXPIRED
+ - verification_config (concrete: GPS coords + radius, photo required, deadline timestamp)
+ - reward_coins
+ - is_multiplayer (bool), participant_ids[]
+ - created_at, accepted_at, expires_at, resolved_at
+
+Challenge
+ - id, from_user_id, to_user_id, quest_instance_id
+ - stake_coins, status: PENDING | ACCEPTED | DECLINED | COMPLETED | FAILED
+
+Bet
+ - id, quest_instance_id (or challenge_id), bettor_id
+ - side: COMPLETE | FAIL
+ - amount_coins
+ - resolved (bool), payout_amount
+
+SelfBounty
+ - id, user_id, quest_instance_id, stake_coins
+
+BossRaid
+ - id, party_id, title, status
+ - progress_pct (derived from sub-tasks)
+RaidTask
+ - id, raid_id, title, assigned_user_id (nullable), status: OPEN | DONE
+
+FeedEvent
+ - id, party_id, type (QUEST_COMPLETED, QUEST_FAILED, BET_WON, CHALLENGE_ISSUED, RAID_CREATED, ...)
+ - actor_user_id, payload (jsonb), created_at
+
+LedgerEntry
+ - id, user_id, amount (+/-), reason (REWARD, BET_WIN, BET_LOSS, CHALLENGE_STAKE, RAID_BONUS...)
+ - related_entity_type, related_entity_id, created_at
+```
+
+Using a `LedgerEntry` table (rather than direct balance mutation) is the single most important data-integrity decision in this app — coins touch quests, challenges, bets, and bounties, and you want one auditable trail.
+
+### 6. Core User Flow (build this first, end to end)
+
+This is the flow explicitly marked as priority in the source concept:
+
+```
+MAP (default screen)
+  → Adaptive spawn appears as a game-like marker (🍓 SIDEQUEST SPAWNED)
+  → Player taps marker → quest detail sheet
+  → ACCEPT
+  → Quest moves to QUESTS > ACTIVE with timer/progress
+  → Party members get notified, can bet COMPLETE/FAIL
+  → Player travels/completes the objective
+  → VerificationService checks GPS/Photo/Time
+  → Quest resolves VERIFIED or FAILED
+  → EconomyService settles rewards + bet payouts via LedgerEntry
+  → FeedService emits event → appears in Party Feed with reactions
+```
+
+Everything else (Challenges, Boss Raids, Proximity multiplayer, Profile personalization) is an extension of this same spine and should reuse QuestInstance + VerificationService + EconomyService + FeedService rather than inventing parallel systems.
+
+### 7. Screen Inventory (5 tabs)
+
+**MAP**
+- Full-screen map, user location pin, party member pins (if sharing), quest markers (spawn/multiplayer/raid/event styles distinguishable at a glance), tap-to-expand quest card, ambient "something is happening" motion (subtle marker pulse/glow on new spawns).
+
+**QUESTS**
+- Segmented: Active / Nearby / Challenges / My List.
+- Active: timer, progress, verification type badges, reward.
+- My List: freeform want/need items the system can "quest-ify" contextually.
+
+**PARTY**
+- Member roster with avatar, coins, streak, current quest, W/L record, funny titles/achievements.
+- Tap member → their stats + challenge/bet entry points.
+
+**FEED**
+- Reverse-chronological event stream (completions, fails, bets, challenges, new raids). Inline react/comment/bet/join actions.
+
+**PROFILE**
+- "Configure your character": I Like / I Want To Try / I Need To Do tag inputs, Quest Style slider (Chill↔Unhinged), Social preference toggle, stats summary.
+
+**Cross-cutting overlays (not tabs, but core):**
+- Quest Spawn moment (full-screen or prominent toast-like reveal — this is the "wow" moment, treat it as its own component, not a generic notification)
+- Challenge duel screen (issue/accept/decline)
+- Betting sheet (odds-style display, place bet)
+- Boss Raid lobby (progress bar + task checklist by assignee)
+
+### 8. Extensibility Hooks to Build In Now
+
+- **Quest type registry**: verification types and spawn conditions should be data-driven (a config/table), so a "QR code" or "friend confirmation" verifier can be added later without touching QuestInstanceService.
+- **Marker style registry** on the map: spawn / multiplayer / raid / event should each map to a themeable marker component, so reskinning later is a style-table change, not a rewrite.
+- **Feed event renderer registry**: each FeedEvent `type` maps to a small renderer component; adding a new event type later (e.g., "Season ended") is additive.
+- **Design tokens**: colors, spacing, type scale, and the "game HUD" motif (badges, coin icon, progress bars, marker glow) should live in a single theme file from the start.
+
+### 9. Phased Build Order
+
+**Phase 0 — Foundations**
+Auth, User/Party models, empty tab shell (MAP/QUESTS/PARTY/FEED/PROFILE), design tokens/theme file.
+
+**Phase 1 — Core Loop (the priority flow above)**
+Static/manual quest spawn on map → accept → GPS+Time verification → coin reward → feed event. No betting/adaptive spawning yet. This proves the spine end to end.
+
+**Phase 2 — Economy**
+LedgerEntry system, Betting on Phase 1 quests, Self-Bounties.
+
+**Phase 3 — Social competitive layer**
+Challenges (peer duels), Party stats/roster, Feed reactions/comments.
+
+**Phase 4 — Adaptive Spawning + Proximity**
+QuestSpawningService using profile + location + history; ProximityService for multiplayer spawns.
+
+**Phase 5 — Boss Raids**
+Raid creation, task breakdown/assignment, shared progress tracker.
+
+**Phase 6 — Polish & Personalization**
+Photo verification + image recognition, achievements/titles, quest style tuning, animation/motion polish on the "spawn" moment.
+
+---
+
+## PART 2 — AGENT PROMPT
+
+Paste the block below to a design/coding agent to kick off execution. It's written to be self-contained.
+
+```
+You are designing and building SideQuest, a multiplayer game layered onto real life. Friends
+form a Party, complete real-world SideQuests, challenge each other, bet virtual Coins on
+outcomes, get quests adaptively spawned based on context, and coordinate group activities
+called Boss Raids.
+
+TONE: This must feel like opening a multiplayer game — a game HUD + social feed + live map —
+never like a to-do or productivity app. Quest spawns, challenges, and bets should feel like
+game events firing, not notifications about tasks.
+
+NAVIGATION: Five tabs — MAP, QUESTS, PARTY, FEED, PROFILE — with MAP as the default screen.
+
+WORKING PRINCIPLES (follow these strictly):
+1. Build the core loop first, end to end, before any other feature:
+   MAP → quest spawn appears as a game-like marker → player accepts → quest appears in
+   QUESTS/Active with timer + progress → Party members can bet COMPLETE/FAIL → player
+   completes the real-world action → verification resolves (GPS and/or Time to start) →
+   coins are rewarded/lost → a Feed event is generated.
+2. Keep these as clearly separate concerns, even in the first version — do not merge them
+   into one big "quest" object or one big screen component:
+   - Quest templates (reusable quest content) vs. Quest instances (a specific spawned/accepted
+     quest with its own state and deadline)
+   - Verification logic (GPS / Photo / Time, and combinations) as a pluggable system, not
+     hardcoded per quest
+   - The coin economy as an append-only ledger of transactions (rewards, bet wins/losses,
+     challenge stakes) rather than a single balance number mutated from many places
+   - The Party Feed as a stream of emitted events from every other system (quests, challenges,
+     bets, raids), not something hand-assembled per feature
+3. Use a single design tokens/theme source (colors, spacing, type scale, iconography for
+   coins/badges/progress) so the visual style can be changed later without touching component
+   logic.
+4. Make quest markers on the map visually distinct by type (adaptive spawn, multiplayer,
+   Boss Raid, limited-time event) at a glance, with clear at-a-glance metadata: distance,
+   reward, and time remaining.
+5. Treat the "quest spawned" reveal as its own first-class moment/component (not a generic
+   toast or push notification UI) — this is the core emotional hook of the product.
+6. Write clean, modular code/structure with clear naming so a future designer or engineer can
+   extend this: new verification types, new quest categories, new marker styles, and new
+   feed event types should all be addable without rewriting core logic. Do not take shortcuts
+   that would need to be undone later — prioritize a small number of clean, well-separated
+   pieces over a large number of tangled ones.
+7. Do not build betting, challenges, adaptive spawning, or Boss Raids before the core loop in
+   step 1 works end to end. Sequence the work in this order:
+   Phase 1: Core loop (manual/static quest spawn → accept → verify → reward → feed)
+   Phase 2: Coin ledger + betting + self-bounties
+   Phase 3: Peer challenges + Party roster/stats + feed reactions
+   Phase 4: Adaptive quest spawning based on user interests/location/history + proximity-based
+            multiplayer spawns
+   Phase 5: Boss Raids (large objective broken into assigned sub-tasks with shared progress)
+   Phase 6: Photo verification, achievements/titles, and motion/animation polish
+
+DELIVERABLE FOR THIS PASS:
+Start with Phase 1 only. Produce:
+- A clear component/module structure (screens, shared UI components, and — if you're touching
+  backend/data — services and data models) that reflects the separations above
+- The MAP screen with a mock/sample quest spawn marker and expandable quest detail
+- The QUESTS screen with an Active section showing an accepted quest with timer/progress
+- A minimal Feed screen that can render at least one event type (quest completed)
+- A single theme/tokens file driving colors, spacing, and type, used consistently across all
+  of the above
+
+Ask me clarifying questions only if something above is genuinely ambiguous for the platform
+you're building on (e.g., web vs. native, specific map provider). Otherwise, make reasonable
+default choices, note the assumptions you made, and proceed.
+```
+
+---
+
+### Notes for handoff
+
+- If you're feeding this to a **coding agent** (e.g., Claude Code), Part 2's prompt is meant to be dropped in directly as the task brief, with Part 1 attached as background/reference context.
+- If you're feeding this to a **design tool agent** (Figma-style), strip the backend/data-model language from the prompt and keep the tone, navigation, screen inventory, and Phase 1 deliverable list — those are the parts that matter for a visual-only pass.
+- Everything in Part 1 Section 8 ("Extensibility Hooks") is intentionally over-engineered relative to Phase 1 alone — that's deliberate, so early structural decisions don't have to be undone when Phases 2–6 get built.
+
+

@@ -7,15 +7,15 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "corepack pnpm --filter @sidequest/mobile start",
-    "dev:api": "corepack pnpm --filter @sidequest/api dev",
+    "dev": "pnpm --filter @sidequest/mobile start",
+    "dev:api": "pnpm --filter @sidequest/api dev",
     "build:web": "npm --prefix apps/mobile run build:web",
     "serve:web": "node scripts/serve-web.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "corepack pnpm -r typecheck",
+    "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "check": "corepack pnpm format:check && corepack pnpm typecheck && corepack pnpm test"
+    "check": "pnpm format:check && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

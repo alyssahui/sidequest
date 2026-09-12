@@ -59,6 +59,7 @@ export function buildApp() {
   const economy = new LedgerEconomyAdapter(marketLedger);
   const bounties = new SelfBountyService(marketLedger, clock, ids);
   const grok = new GrokService();
+  const uploadedPhotos = new Map<string, string>();
   // Location owns its own routes, storage, and retention timer, and is built
   // before the quest runtime because quest GPS verification is backed by it.
   const location = registerLocationModule(app, {
@@ -81,6 +82,7 @@ export function buildApp() {
     photo: createCvPhotoReview({
       endpoint: process.env.CV_API_URL,
       apiKey: process.env.CV_API_KEY,
+      resolveMedia: (mediaRef) => uploadedPhotos.get(mediaRef),
     }),
   });
   const demoQuestServices = questRuntime.services;
@@ -105,6 +107,25 @@ export function buildApp() {
     ...request.principal,
     coins: await demoQuestServices.economy.balanceFor(request.principal.userId),
   }));
+  app.post("/v1/media/photos", async (request, reply) => {
+    const body = request.body as { dataUrl?: string };
+    if (
+      !body.dataUrl ||
+      !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(
+        body.dataUrl,
+      ) ||
+      body.dataUrl.length > 7_000_000
+    )
+      return reply
+        .code(400)
+        .send({
+          code: "PHOTO_UPLOAD_INVALID",
+          message: "Upload a JPEG, PNG, or WebP image smaller than 5 MB.",
+        });
+    const mediaRef = `media://uploads/${ids.next()}`;
+    uploadedPhotos.set(mediaRef, body.dataUrl);
+    return { mediaRef };
+  });
   app.get("/v1/demo/session", async (request) => ({
     user: demoUsers.find((user) => user.id === request.principal.userId),
     users: demoUsers,

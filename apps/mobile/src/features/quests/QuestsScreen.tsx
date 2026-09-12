@@ -41,6 +41,7 @@ function toItem(challenge: Challenge, viewerId: string): QuestItem {
     timeLeft: challenge.status === "PENDING" ? "24 hrs" : challenge.status,
     stake: challenge.stakeCoins,
     serverVersion: challenge.version,
+    ...(challenge.questId ? { serverQuestId: challenge.questId } : {}),
   };
 }
 
@@ -252,6 +253,30 @@ export function QuestsScreen() {
           onComplete={() => void resolve(true)}
           onDecline={() => void respond(false)}
           onFail={() => void resolve(false)}
+          onUploadPhoto={async (dataUrl) => {
+            if (!selected.serverQuestId)
+              throw new Error(
+                "Accept this challenge before submitting evidence.",
+              );
+            const uploaded = await request<{ mediaRef: string }>(
+              "/v1/media/photos",
+              {
+                method: "POST",
+                body: JSON.stringify({ dataUrl }),
+              },
+            );
+            await request(`/v1/quests/${selected.serverQuestId}/evidence`, {
+              method: "POST",
+              headers: {
+                "idempotency-key": `photo-${selected.id}-${Date.now()}`,
+              },
+              body: JSON.stringify({
+                expectedVersion: 1,
+                evidence: { photo: { mediaRef: uploaded.mediaRef } },
+              }),
+            });
+            await refresh();
+          }}
           quest={selected}
         />
       ) : null}

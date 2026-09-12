@@ -4,6 +4,7 @@ import { CoinAmount } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 
 import type { QuestItem } from "./demoData";
+import { PhotoEvidenceUploader } from "./PhotoEvidenceUploader";
 
 type Props = {
   quest: QuestItem;
@@ -14,6 +15,7 @@ type Props = {
   onCancel: () => void;
   onComplete: () => void;
   onFail: () => void;
+  onUploadPhoto: (dataUrl: string) => Promise<void>;
 };
 
 export function QuestDetailOverlay({
@@ -25,6 +27,7 @@ export function QuestDetailOverlay({
   onCancel,
   onComplete,
   onFail,
+  onUploadPhoto,
 }: Props) {
   const pending =
     quest.attention &&
@@ -85,6 +88,10 @@ export function QuestDetailOverlay({
             <CoinAmount amount={quest.stake} />
           </View>
           <Text style={styles.balance}>Your credit: ◉ {balance}</Text>
+
+          {active && quest.serverQuestId ? (
+            <PhotoEvidenceUploader onUpload={onUploadPhoto} />
+          ) : null}
 
           {pending ? (
             <View style={styles.actions}>

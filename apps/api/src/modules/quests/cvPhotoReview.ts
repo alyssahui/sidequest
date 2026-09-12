@@ -5,6 +5,7 @@ export function createCvPhotoReview(options: {
   apiKey?: string;
   fetcher?: typeof fetch;
   timeoutMs?: number;
+  resolveMedia?: (mediaRef: string) => string | undefined;
 }): PhotoReviewPort {
   const fetcher = options.fetcher ?? fetch;
   return {
@@ -22,7 +23,11 @@ export function createCvPhotoReview(options: {
             authorization: `Bearer ${options.apiKey}`,
             "content-type": "application/json",
           },
-          body: JSON.stringify({ mediaRef, expectedEvidence: prompt }),
+          body: JSON.stringify({
+            mediaRef,
+            imageData: options.resolveMedia?.(mediaRef),
+            expectedEvidence: prompt,
+          }),
           signal: AbortSignal.timeout(options.timeoutMs ?? 8_000),
         });
         if (!response.ok) throw new Error("CV unavailable");

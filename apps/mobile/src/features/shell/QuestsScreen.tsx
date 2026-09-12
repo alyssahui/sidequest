@@ -1,4 +1,4 @@
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, spacing, typeScale } from "@sidequest/ui/theme";
@@ -8,19 +8,25 @@ import { ScreenFrame } from "./ScreenFrame";
 export function QuestsScreen() {
   return (
     <ScreenFrame eyebrow="YOUR ADVENTURES" title="QUESTS">
-      <View style={styles.tabs}><StatusPill label="ACTIVE · 1" /><StatusPill label="NEARBY · 2" /><StatusPill label="CHALLENGES" /><StatusPill label="MY LIST" /></View>
+      <View style={styles.tabs}>
+        <StatusPill label="ACTIVE · 1" />
+        <StatusPill label="NEARBY · 2" />
+        <StatusPill label="CHALLENGES" />
+        <StatusPill label="MY LIST" />
+      </View>
       <HudCard>
         <Text style={styles.title}>Morning walk with the Party</Text>
         <Text style={styles.meta}>12 min left · GPS verification · ◉ 45</Text>
         <Text style={styles.note}>
-          Collect three pieces of litter and dispose of them safely. No pressure—skip anytime.
+          Collect three pieces of litter and dispose of them safely. No
+          pressure—skip anytime.
         </Text>
       </HudCard>
       <StatusPill label="NEARBY · 3" />
       <HudCard>
         <Text style={styles.title}>Something is happening nearby.</Text>
         <Text style={styles.note}>
-        Matches your friends + community preferences. GPS + TIME · 30 coins.
+          Matches your friends + community preferences. GPS + TIME · 30 coins.
         </Text>
       </HudCard>
     </ScreenFrame>

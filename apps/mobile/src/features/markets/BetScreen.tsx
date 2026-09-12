@@ -121,7 +121,7 @@ function MarketRow({
       accessibilityState={{ selected }}
       onPress={onSelect}
     >
-      <HudCard style={selected ? styles.selectedRow : undefined}>
+      <HudCard>
         <View style={styles.row}>
           <StatusPill label={market.status} />
           <Text style={styles.meta}>{market.closesLabel}</Text>
@@ -204,7 +204,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     lineHeight: 20,
   },
-  selectedRow: { borderColor: colors.brand, borderWidth: 2 },
   row: {
     alignItems: "center",
     flexDirection: "row",

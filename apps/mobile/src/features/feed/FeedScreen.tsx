@@ -11,7 +11,7 @@ export const demoFeed: FeedEvent[] = [
     occurredAt: "2026-09-11T18:30:00.000Z",
     actorDisplayName: "Zuri",
     title: "completed “7 AM Run”",
-    detail: "Six friends predicted against them. Legendary comeback.",
+    detail: "Six friends predicted against them.",
     coinDelta: 120,
   },
   {
@@ -20,7 +20,7 @@ export const demoFeed: FeedEvent[] = [
     occurredAt: "2026-09-11T18:22:00.000Z",
     actorDisplayName: "Alyssa",
     title: "won a prediction on Ben",
-    detail: "COMPLETE pool paid out. Credit is virtual and stays in the party.",
+    detail: "COMPLETE pool paid out.",
     coinDelta: 35,
   },
   {
@@ -29,7 +29,7 @@ export const demoFeed: FeedEvent[] = [
     occurredAt: "2026-09-11T18:10:00.000Z",
     actorDisplayName: "Chris",
     title: "challenged Maya",
-    detail: "Find the weirdest drink under $5. Declining has no penalty.",
+    detail: "Find the weirdest drink under $5.",
   },
   {
     id: "feed-4",

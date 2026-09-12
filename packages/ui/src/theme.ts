@@ -1,9 +1,11 @@
 export const colors = {
   canvas: "#002F38",
   surface: "#E9DDB3",
+  surfaceStroke: "#7D6328",
   surfaceStrong: "#F7EBC4",
   brand: "#FF9A55",
   brandDeep: "#71272A",
+  brandDeepStroke: "#421114",
   ink: "#082E37",
   inkInverse: "#FFF9E7",
   muted: "#70838A",
@@ -11,6 +13,10 @@ export const colors = {
   warning: "#FFCD66",
   danger: "#E86666",
   outline: "#AFA477",
+} as const;
+
+export const strokes = {
+  card: 4,
 } as const;
 
 export const spacing = {
@@ -42,4 +48,11 @@ export const motion = {
   celebration: 520,
 } as const;
 
-export const theme = { colors, spacing, radii, typeScale, motion } as const;
+export const theme = {
+  colors,
+  spacing,
+  radii,
+  typeScale,
+  motion,
+  strokes,
+} as const;

@@ -6,10 +6,12 @@ import { colors, radii, spacing } from "@sidequest/ui/theme";
 import { ScreenFrame } from "../shell/ScreenFrame";
 import { AddTaskOverlay } from "./AddTaskOverlay";
 import { DEMO_QUEST_BALANCE, demoQuests, type QuestItem } from "./demoData";
+import { useNow } from "./dueAt";
 import { QuestDetailOverlay } from "./QuestDetailOverlay";
 import { QuestRow } from "./QuestRow";
 
 export function QuestsScreen() {
+  const now = useNow();
   const [quests, setQuests] = useState<QuestItem[]>(demoQuests);
   const [balance, setBalance] = useState(DEMO_QUEST_BALANCE);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -22,7 +24,6 @@ export function QuestsScreen() {
 
   function accept() {
     if (!selected || selected.stake > balance) return;
-    setBalance((current) => current - selected.stake);
     setQuests((current) =>
       current.map((quest) =>
         quest.id === selected.id
@@ -46,11 +47,8 @@ export function QuestsScreen() {
 
   function complete() {
     if (!selected) return;
-    if (selected.escrowHeld) {
-      const payout =
-        selected.kind === "OWN" ? selected.stake : selected.stake * 2;
-      setBalance((current) => current + payout);
-    }
+    if (selected.status === "COMPLETE" || selected.status === "FAILED") return;
+    setBalance((current) => current + selected.stake);
     setQuests((current) =>
       current.map((quest) =>
         quest.id === selected.id
@@ -63,6 +61,8 @@ export function QuestsScreen() {
 
   function fail() {
     if (!selected) return;
+    if (selected.status === "COMPLETE" || selected.status === "FAILED") return;
+    setBalance((current) => Math.max(0, current - selected.stake));
     setQuests((current) =>
       current.map((quest) =>
         quest.id === selected.id
@@ -75,7 +75,6 @@ export function QuestsScreen() {
 
   function create(quest: QuestItem) {
     if (quest.stake > balance) return;
-    setBalance((current) => current - quest.stake);
     setQuests((current) => [quest, ...current]);
     setAdding(false);
   }
@@ -99,6 +98,7 @@ export function QuestsScreen() {
       {quests.map((quest) => (
         <QuestRow
           key={quest.id}
+          now={now}
           onPress={() => setSelectedId(quest.id)}
           quest={quest}
         />
@@ -106,6 +106,7 @@ export function QuestsScreen() {
       {selected ? (
         <QuestDetailOverlay
           balance={balance}
+          now={now}
           onAccept={accept}
           onClose={close}
           onComplete={complete}

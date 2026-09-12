@@ -21,7 +21,7 @@ export function QuestBriefing({ briefing }: { briefing: QuestBriefingData }) {
       <Detail
         icon="📝"
         label="FIELD NOTES"
-        value={briefing.notes.join(" · ") || "No extra notes—make it yours."}
+        value={briefing.notes.join(" · ") || "None."}
       />
     </View>
   );

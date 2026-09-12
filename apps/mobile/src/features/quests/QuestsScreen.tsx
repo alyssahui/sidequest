@@ -8,6 +8,7 @@ import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import { ScreenFrame } from "../shell/ScreenFrame";
 import { AddTaskOverlay } from "./AddTaskOverlay";
 import { demoQuests, type QuestItem } from "./demoData";
+import { useNow } from "./dueAt";
 import { QuestDetailOverlay } from "./QuestDetailOverlay";
 import { QuestRow } from "./QuestRow";
 
@@ -38,13 +39,14 @@ function toItem(challenge: Challenge, viewerId: string): QuestItem {
     ),
     description:
       `${challenge.description} ${challenge.lastNotice ?? ""}`.trim(),
-    timeLeft: challenge.status === "PENDING" ? "24 hrs" : challenge.status,
+    dueAt: challenge.expiresAt,
     stake: challenge.stakeCoins,
     serverVersion: challenge.version,
   };
 }
 
 export function QuestsScreen() {
+  const now = useNow();
   const { request, user } = useDemoSession();
   const [localQuests, setLocalQuests] = useState<QuestItem[]>(demoQuests);
   const [sharedQuests, setSharedQuests] = useState<QuestItem[]>([]);
@@ -125,11 +127,18 @@ export function QuestsScreen() {
   }
 
   function completeLocal() {
-    if (!selected) return;
-    if (selected.escrowHeld) setBalance((current) => current + selected.stake);
+    if (
+      !selected ||
+      selected.status === "COMPLETE" ||
+      selected.status === "FAILED"
+    )
+      return;
+    setBalance((current) => current + selected.stake);
     setLocalQuests((current) =>
       current.map((quest) =>
-        quest.id === selected.id ? { ...quest, status: "COMPLETE" } : quest,
+        quest.id === selected.id
+          ? { ...quest, status: "COMPLETE", attention: false }
+          : quest,
       ),
     );
     close();
@@ -151,10 +160,18 @@ export function QuestsScreen() {
   }
 
   function failLocal() {
-    if (!selected) return;
+    if (
+      !selected ||
+      selected.status === "COMPLETE" ||
+      selected.status === "FAILED"
+    )
+      return;
+    setBalance((current) => Math.max(0, current - selected.stake));
     setLocalQuests((current) =>
       current.map((quest) =>
-        quest.id === selected.id ? { ...quest, status: "FAILED" } : quest,
+        quest.id === selected.id
+          ? { ...quest, status: "FAILED", attention: false }
+          : quest,
       ),
     );
     close();
@@ -175,13 +192,12 @@ export function QuestsScreen() {
           task: quest.title,
           locationLabel: quest.location,
           notes: quest.description,
-          deadline: new Date(Date.now() + 24 * 3600_000).toISOString(),
+          deadline: quest.dueAt,
           stakeCoins: quest.stake,
         }),
       });
       await refresh();
     } else {
-      setBalance((current) => current - quest.stake);
       setLocalQuests((current) => [quest, ...current]);
     }
     setAdding(false);
@@ -207,6 +223,7 @@ export function QuestsScreen() {
       {quests.map((quest) => (
         <QuestRow
           key={quest.id}
+          now={now}
           onPress={() => setSelectedId(quest.id)}
           quest={quest}
         />
@@ -215,6 +232,7 @@ export function QuestsScreen() {
         <QuestDetailOverlay
           balance={balance}
           onAccept={() => void respond(true)}
+          now={now}
           onClose={close}
           onComplete={() => void resolve(true)}
           onDecline={() => void respond(false)}

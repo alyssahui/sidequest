@@ -43,35 +43,29 @@ export function ChallengeCard({
         <Text style={styles.explanation}>{explanation}</Text>
       ) : null}
       {direction === "INCOMING" && status === "PENDING" ? (
-        <>
-          <Text style={styles.safe}>
-            Accept only if you want to. Declining has no penalty and never
-            shares your location.
-          </Text>
-          <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onAccept}
-              style={styles.accept}
-            >
-              <Text style={styles.acceptText}>ACCEPT DUEL</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={onDecline}
-              style={styles.decline}
-            >
-              <Text style={styles.declineText}>DECLINE</Text>
-            </Pressable>
-          </View>
-        </>
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onAccept}
+            style={styles.accept}
+          >
+            <Text style={styles.acceptText}>ACCEPT DUEL</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onDecline}
+            style={styles.decline}
+          >
+            <Text style={styles.declineText}>DECLINE</Text>
+          </Pressable>
+        </View>
       ) : (
         <Text style={styles.safe}>
           {status === "REJECTED"
-            ? "Challenge declined. Every escrowed credit is returned—no hard feelings."
+            ? "Declined."
             : status === "ACCEPTED"
-              ? "Duel live! Progress and final outcome notices will appear right here."
-              : "Delivered and waiting for their choice. No location is shared before acceptance."}
+              ? "Accepted."
+              : "Waiting."}
         </Text>
       )}
     </HudCard>

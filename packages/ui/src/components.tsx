@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { StyleSheet, Text, View, type ViewProps } from "react-native";
 
-import { colors, radii, spacing } from "./theme";
+import { colors, radii, spacing, strokes } from "./theme";
 
 export function HudCard({
   children,
@@ -34,9 +34,9 @@ export function StatusPill({ label }: { label: string }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderColor: colors.outline,
+    borderColor: colors.surfaceStroke,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: strokes.card,
     padding: spacing.md,
   },
   coins: { color: colors.brandDeep, fontSize: 16, fontWeight: "900" },

@@ -45,22 +45,38 @@ describe("quest PWA surface", () => {
     expect(add).toContain("CHALLENGE PLAYER");
     expect(add).toContain("SELF-WAGER");
     expect(add).toContain("SEND CHALLENGE");
+    expect(add).toContain("BY THIS DATE");
+    expect(add).toContain("Due day");
+    expect(add).toContain("Due time");
+    expect(add).toContain("defaultDue");
+    expect(add).toContain('"n/a"');
+    expect(add).not.toContain("Your call");
+    expect(add).not.toContain("A promise you put credit behind yourself");
+    expect(row).toContain("quest.description ?");
+    expect(screen).toContain("current + selected.stake");
+    expect(screen).toContain("current - selected.stake");
   });
 
   it("color-codes own tasks yellow and challenges/system quests red", () => {
     expect(row).toContain("yellow");
     expect(row).toContain("red");
-    expect(row).toContain("⚠");
-    expect(row).toContain("Needs attention");
+    expect(row).toContain("surfaceStroke");
+    expect(row).toContain("brandDeepStroke");
+    expect(row).toContain("strokes.card");
+    expect(row).toContain("LocationPinIcon");
+    expect(row).toContain("PersonIcon");
+    expect(row).toContain("formatTimeLeft");
+    expect(row).toContain("dueAt");
+    expect(overlay).toContain("formatTimeLeft");
   });
 
   it("resolves pending challenges in an overlay", () => {
     expect(overlay).toContain("ACCEPT");
     expect(overlay).toContain("DECLINE");
-    expect(overlay).toContain("Declining");
-    expect(overlay).toContain("no penalty");
-    expect(overlay).toContain("never shares your location");
     expect(overlay).toContain("WAGER");
+    expect(overlay).not.toContain("fits your day");
+    expect(overlay).not.toContain("no hard feelings");
+    expect(overlay).not.toContain("never shares your location");
     expect(screen).toContain("attention: false");
   });
 

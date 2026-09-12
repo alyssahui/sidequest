@@ -4,10 +4,13 @@ import { CoinAmount } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 
 import type { QuestItem } from "./demoData";
+import { formatTimeLeft } from "./dueAt";
+import { LocationPinIcon } from "./MetaIcons";
 
 type Props = {
   quest: QuestItem;
   balance: number;
+  now: number | null;
   onClose: () => void;
   onAccept: () => void;
   onDecline: () => void;
@@ -18,6 +21,7 @@ type Props = {
 export function QuestDetailOverlay({
   quest,
   balance,
+  now,
   onClose,
   onAccept,
   onDecline,
@@ -30,6 +34,7 @@ export function QuestDetailOverlay({
     quest.direction === "INCOMING";
   const active = quest.status === "ACTIVE";
   const insufficient = pending && quest.stake > balance;
+  const timeLeft = now === null ? "…" : formatTimeLeft(quest.dueAt, now);
 
   return (
     <Modal animationType="slide" onRequestClose={onClose} transparent visible>
@@ -54,28 +59,31 @@ export function QuestDetailOverlay({
           <Text accessibilityRole="header" style={styles.title}>
             {quest.title}
           </Text>
-          <Text style={styles.meta}>📍 {quest.location}</Text>
-          <Text style={styles.meta}>⏱ {quest.timeLeft} left</Text>
-          <Text style={styles.body}>{quest.description}</Text>
+          <View style={styles.metaRow}>
+            <LocationPinIcon color={colors.ink} />
+            <Text style={styles.meta}>{quest.location}</Text>
+          </View>
+          <Text style={styles.meta}>
+            {timeLeft === "expired" ? "EXPIRED" : `⏱ ${timeLeft} left`}
+          </Text>
+          {quest.description ? (
+            <Text style={styles.body}>{quest.description}</Text>
+          ) : null}
           {quest.kind === "OWN" ? (
             <Text style={styles.body}>
-              Self-wager ◉ {quest.stake}. Finish and the credit returns. Miss it
-              and it is forfeited. Virtual credit has no monetary value.
+              Self-wager ◉ {quest.stake}. Complete to gain it. Fail to lose it.
             </Text>
           ) : quest.direction === "OUTGOING" ? (
             <Text style={styles.body}>
-              Waiting on {quest.person}. Your ◉ {quest.stake} is held. If they
-              decline, every escrowed credit is returned—no hard feelings.
+              Waiting on {quest.person}. Wager ◉ {quest.stake}.
             </Text>
           ) : quest.kind === "SYSTEM" ? (
             <Text style={styles.body}>
-              SideQuest spawned this. Wager ◉ {quest.stake}. Declining has no
-              penalty and never shares your location.
+              Spawned quest. Wager ◉ {quest.stake}.
             </Text>
           ) : (
             <Text style={styles.body}>
-              {quest.person} challenged you. Wager ◉ {quest.stake}. Declining
-              has no penalty and never shares your location.
+              {quest.person} challenged you. Wager ◉ {quest.stake}.
             </Text>
           )}
           <View style={styles.row}>
@@ -129,8 +137,8 @@ export function QuestDetailOverlay({
           {quest.status === "COMPLETE" || quest.status === "FAILED" ? (
             <Text style={styles.body}>
               {quest.status === "COMPLETE"
-                ? "Done. Credit settled for this task."
-                : "Missed. The wagered credit is gone."}
+                ? `Done. ◉ ${quest.stake} added to your credit.`
+                : `Missed. ◉ ${quest.stake} deducted from your credit.`}
             </Text>
           ) : null}
 
@@ -172,7 +180,12 @@ const styles = StyleSheet.create({
     fontSize: typeScale.title,
     fontWeight: "900",
   },
-  meta: { color: colors.ink, fontWeight: "700" },
+  metaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 6,
+  },
+  meta: { color: colors.ink, flex: 1, fontWeight: "700" },
   body: { color: colors.muted, lineHeight: 21 },
   row: {
     alignItems: "center",

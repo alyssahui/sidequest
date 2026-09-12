@@ -17,7 +17,7 @@ const copy: Record<
   loading: { title: "LOADING QUESTS", detail: "Checking the game world…" },
   empty: {
     title: "NO QUESTS HERE",
-    detail: "Take a breather or discover something nearby.",
+    detail: "None nearby.",
   },
   error: {
     title: "QUESTS COULDN'T LOAD",
@@ -38,7 +38,7 @@ const copy: Record<
   },
   expired: {
     title: "QUEST EXPIRED",
-    detail: "No penalty for skipping. Pick another adventure.",
+    detail: "This quest expired.",
     action: "VIEW ALTERNATIVES",
   },
   conflict: {
@@ -48,7 +48,7 @@ const copy: Record<
   },
   complete: {
     title: "QUEST VERIFIED",
-    detail: "One completed action added to your Party impact summary.",
+    detail: "Quest complete.",
     action: "BACK TO QUESTS",
   },
 };

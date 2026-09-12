@@ -13,12 +13,16 @@ export type QuestItem = {
   location: string;
   person: string;
   description: string;
-  timeLeft: string;
+  dueAt: string;
   stake: number;
   serverVersion?: number;
 };
 
 export const DEMO_QUEST_BALANCE = 420;
+
+function dueIn(ms: number) {
+  return new Date(Date.now() + ms).toISOString();
+}
 
 export const demoQuests: QuestItem[] = [
   {
@@ -32,7 +36,7 @@ export const demoQuests: QuestItem[] = [
     location: "Wean 6",
     person: "You",
     description: "Find something you have never noticed in the hallway.",
-    timeLeft: "12 hrs 30 mins",
+    dueAt: dueIn(12 * 60 * 60_000 + 30 * 60_000),
     stake: 25,
   },
   {
@@ -46,7 +50,7 @@ export const demoQuests: QuestItem[] = [
     location: "Hunt Library",
     person: "You",
     description: "Get the overdue stack off your desk today.",
-    timeLeft: "8 hrs 10 mins",
+    dueAt: dueIn(8 * 60 * 60_000 + 10 * 60_000),
     stake: 10,
   },
   {
@@ -60,7 +64,7 @@ export const demoQuests: QuestItem[] = [
     location: "Campus",
     person: "Ben",
     description: "Ben challenged you to teach one tiny skill before tonight.",
-    timeLeft: "58 min",
+    dueAt: dueIn(58 * 60_000),
     stake: 25,
   },
   {
@@ -73,8 +77,8 @@ export const demoQuests: QuestItem[] = [
     title: "Try a pastry you have never eaten",
     location: "Near campus bakery",
     person: "SideQuest",
-    description: "A spawned SideQuest. Accept only if it fits your day.",
-    timeLeft: "41 min",
+    description: "Spawned SideQuest.",
+    dueAt: dueIn(41 * 60_000),
     stake: 30,
   },
 ];

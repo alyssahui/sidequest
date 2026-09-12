@@ -31,6 +31,8 @@ describe("bet tab prediction surface", () => {
     expect(bet).toContain("balanceValue");
     expect(bet).toContain("pari-mutuel");
     expect(bet).toContain("odds or an order book");
+    expect(bet).not.toContain("selectedRow");
+    expect(card).not.toContain("style={styles.card}");
     expect(card).toContain("Estimated total if correct");
     expect(card).toContain("no monetary value");
   });

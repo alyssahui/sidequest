@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { createElement, useState } from "react";
 import {
   Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +14,15 @@ import {
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import type { QuestItem } from "./demoData";
+import {
+  combineDueAt,
+  defaultDue,
+  formatTimeLeft,
+  isFutureDue,
+  toDateInput,
+  toTimeInput,
+  useNow,
+} from "./dueAt";
 
 const stakes = [10, 25, 50];
 type Mode = "OWN" | "CHALLENGE";
@@ -37,18 +47,27 @@ export function AddTaskOverlay({
 }) {
   const { request, requestAudio, user } = useDemoSession();
   const friends = DEMO_USERS.filter((candidate) => candidate.id !== user.id);
+  const now = useNow();
+  const starting = defaultDue();
   const [mode, setMode] = useState<Mode | null>(null);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState(() => toDateInput(starting));
+  const [dueTime, setDueTime] = useState(() => toTimeInput(starting));
   const [friend, setFriend] = useState(friends[0]?.name ?? "Ben");
   const [stake, setStake] = useState(25);
   const [design, setDesign] = useState<QuestDesign | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const valid = Boolean(mode) && title.trim().length >= 3 && stake <= balance;
-  const deadline = () => new Date(Date.now() + 24 * 3600_000).toISOString();
+  const dueOk = isFutureDue(dueDate, dueTime, now ?? Date.now());
+  const due = combineDueAt(dueDate, dueTime);
+  const valid =
+    Boolean(mode) && title.trim().length >= 3 && stake <= balance && dueOk;
+  const preview =
+    due && now !== null ? formatTimeLeft(due.toISOString(), now) : null;
+  const minDate = toDateInput(new Date(now ?? Date.now()));
 
   async function askGrok() {
     const recipient = friends.find((candidate) => candidate.name === friend);
@@ -63,7 +82,7 @@ export function AddTaskOverlay({
           task: title,
           locationLabel: location,
           notes: description,
-          deadline: deadline(),
+          deadline: due?.toISOString() ?? starting.toISOString(),
         }),
       });
       setDesign(next);
@@ -119,7 +138,7 @@ export function AddTaskOverlay({
   }
 
   async function submit() {
-    if (!mode || !valid) return;
+    if (!mode || !valid || !due) return;
     setWorking("send");
     setError(null);
     try {
@@ -131,14 +150,10 @@ export function AddTaskOverlay({
         direction: mode === "OWN" ? "SELF" : "OUTGOING",
         escrowHeld: true,
         title: title.trim(),
-        location: location.trim() || (mode === "OWN" ? "Your call" : "Campus"),
+        location: location.trim() || "n/a",
         person: mode === "OWN" ? "You" : friend,
-        description:
-          description.trim() ||
-          (mode === "OWN"
-            ? "A promise you put credit behind yourself."
-            : `You challenged ${friend}. They can decline without penalty.`),
-        timeLeft: "24 hrs",
+        description: description.trim(),
+        dueAt: due.toISOString(),
         stake,
       });
     } catch (caught) {
@@ -307,6 +322,36 @@ export function AddTaskOverlay({
                     </Text>
                   ) : null}
                 </View>
+                <Text style={styles.label}>BY THIS DATE</Text>
+                <Text style={styles.help}>Change the time or day.</Text>
+                <View style={styles.dueRow}>
+                  <View style={styles.dueField}>
+                    <Text style={styles.dueHint}>DAY</Text>
+                    <DateTimeField
+                      accessibilityLabel="Due day"
+                      min={minDate}
+                      onChange={setDueDate}
+                      type="date"
+                      value={dueDate}
+                    />
+                  </View>
+                  <View style={styles.dueField}>
+                    <Text style={styles.dueHint}>TIME</Text>
+                    <DateTimeField
+                      accessibilityLabel="Due time"
+                      onChange={setDueTime}
+                      type="time"
+                      value={dueTime}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.preview}>
+                  {!dueOk
+                    ? "Pick a time in the future."
+                    : preview
+                      ? `Time left: ${preview}`
+                      : "Time left: 1 hr"}
+                </Text>
                 <Text style={styles.label}>
                   {mode === "OWN" ? "SELF-WAGER" : "SYMMETRIC WAGER"}
                 </Text>
@@ -328,8 +373,8 @@ export function AddTaskOverlay({
                 </View>
                 <Text style={styles.help}>
                   {mode === "OWN"
-                    ? "Finish and your stake returns; miss it and it is forfeited."
-                    : `You and ${friend} each put up the same stake. Declining has no penalty.`}
+                    ? "Complete to gain the wager. Fail to lose it."
+                    : `You and ${friend} each stake the same amount.`}
                 </Text>
                 <Pressable
                   disabled={!valid || Boolean(working)}
@@ -360,6 +405,60 @@ export function AddTaskOverlay({
     </Modal>
   );
 }
+
+function DateTimeField({
+  type,
+  value,
+  min,
+  onChange,
+  accessibilityLabel,
+}: {
+  type: "date" | "time";
+  value: string;
+  min?: string;
+  onChange: (value: string) => void;
+  accessibilityLabel: string;
+}) {
+  if (Platform.OS === "web") {
+    return createElement("input", {
+      "aria-label": accessibilityLabel,
+      min,
+      onChange: (event: { target: { value: string } }) =>
+        onChange(event.target.value),
+      step: type === "time" ? 60 : undefined,
+      style: webFieldStyle,
+      type,
+      value,
+    });
+  }
+
+  return (
+    <TextInput
+      accessibilityLabel={accessibilityLabel}
+      onChangeText={onChange}
+      placeholder={type === "date" ? "YYYY-MM-DD" : "HH:MM"}
+      placeholderTextColor={colors.muted}
+      style={styles.input}
+      value={value}
+    />
+  );
+}
+
+const webFieldStyle = {
+  backgroundColor: "transparent",
+  border: `1px solid ${colors.outline}`,
+  borderRadius: radii.sm,
+  boxSizing: "border-box" as const,
+  color: colors.ink,
+  colorScheme: "light" as const,
+  fontSize: 16,
+  fontWeight: "800",
+  height: 48,
+  minHeight: 48,
+  paddingLeft: spacing.md,
+  paddingRight: spacing.md,
+  width: "100%",
+};
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -425,6 +524,24 @@ const styles = StyleSheet.create({
   },
   selected: { backgroundColor: colors.brand },
   chipText: { color: colors.ink, fontWeight: "900" },
+  dueRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  dueField: { flex: 1, gap: spacing.xs },
+  dueHint: {
+    color: colors.muted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  preview: {
+    color: colors.brandDeep,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: spacing.sm,
+  },
   input: {
     borderColor: colors.outline,
     borderRadius: radii.sm,

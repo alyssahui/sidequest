@@ -70,10 +70,7 @@ export function PredictionMarketCard({
         : "CONFIRM PREDICTION";
 
   return (
-    <HudCard
-      accessibilityLabel={`Prediction for ${participantName}`}
-      style={styles.card}
-    >
+    <HudCard accessibilityLabel={`Prediction for ${participantName}`}>
       <View style={styles.row}>
         <StatusPill label="PARTY PREDICTION" />
         <CoinAmount amount={balance} />
@@ -169,7 +166,6 @@ export function PredictionMarketCard({
 }
 
 const styles = StyleSheet.create({
-  card: { borderColor: colors.brand, borderWidth: 2 },
   row: {
     alignItems: "center",
     flexDirection: "row",

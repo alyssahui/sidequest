@@ -35,7 +35,7 @@ export function QuestsScreen() {
       <HudCard accessibilityLabel="Nearby quest: Something is happening nearby">
         <Text style={styles.title}>Something is happening nearby.</Text>
         <Text style={styles.note}>
-          Matches your friends + community preferences. GPS + TIME · 30 coins.
+          Matches your friends + community preferences. GPS + TIME · 30 credit.
         </Text>
       </HudCard>
     </ScreenFrame>

@@ -1,4 +1,4 @@
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -8,6 +8,7 @@ type Props = PropsWithChildren<{
   title: string;
   eyebrow?: string;
   scroll?: boolean;
+  headerRight?: ReactNode;
 }>;
 
 export function ScreenFrame({
@@ -15,19 +16,23 @@ export function ScreenFrame({
   title,
   eyebrow,
   scroll = true,
+  headerRight,
 }: Props) {
   const content = (
     <View style={styles.content}>
       {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-      <Text accessibilityRole="header" style={styles.title}>
-        {title}
-      </Text>
+      <View style={styles.titleRow}>
+        <Text accessibilityRole="header" style={styles.title}>
+          {title}
+        </Text>
+        {headerRight}
+      </View>
       {children}
     </View>
   );
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.safeArea}>
+    <SafeAreaView edges={[]} style={styles.safeArea}>
       {scroll ? (
         <ScrollView contentContainerStyle={styles.scroll}>{content}</ScrollView>
       ) : (
@@ -39,7 +44,7 @@ export function ScreenFrame({
 
 const styles = StyleSheet.create({
   safeArea: { backgroundColor: colors.canvas, flex: 1 },
-  scroll: { flexGrow: 1 },
+  scroll: { flexGrow: 1, paddingBottom: 88 },
   content: { flex: 1, gap: spacing.md, padding: spacing.md },
   eyebrow: {
     color: colors.brand,
@@ -47,8 +52,14 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
   },
+  titleRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
   title: {
     color: colors.inkInverse,
+    flex: 1,
     fontSize: typeScale.hero,
     fontWeight: "900",
   },

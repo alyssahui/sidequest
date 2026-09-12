@@ -5,16 +5,20 @@ const screen = readFileSync(
   new URL("../src/features/quests/QuestsScreen.tsx", import.meta.url),
   "utf8",
 );
+const row = readFileSync(
+  new URL("../src/features/quests/QuestRow.tsx", import.meta.url),
+  "utf8",
+);
+const overlay = readFileSync(
+  new URL("../src/features/quests/QuestDetailOverlay.tsx", import.meta.url),
+  "utf8",
+);
+const add = readFileSync(
+  new URL("../src/features/quests/AddTaskOverlay.tsx", import.meta.url),
+  "utf8",
+);
 const states = readFileSync(
   new URL("../src/features/quests/QuestStatePanel.tsx", import.meta.url),
-  "utf8",
-);
-const challenge = readFileSync(
-  new URL("../src/features/challenges/ChallengeCard.tsx", import.meta.url),
-  "utf8",
-);
-const composer = readFileSync(
-  new URL("../src/features/challenges/ChallengeComposer.tsx", import.meta.url),
   "utf8",
 );
 const briefing = readFileSync(
@@ -23,10 +27,42 @@ const briefing = readFileSync(
 );
 
 describe("quest PWA surface", () => {
-  it.each(["ACTIVE", "NEARBY", "CHALLENGES", "MY LIST"])(
-    "renders the %s section",
-    (section) => expect(screen).toContain(`"${section}"`),
-  );
+  it("keeps a condensed list without markets or section tabs", () => {
+    expect(screen).toContain("QuestRow");
+    expect(screen).not.toContain("PredictionMarketCard");
+    expect(screen).not.toContain("SelfBountyCard");
+    expect(screen).not.toContain('"MY LIST"');
+    expect(screen).not.toContain('"NEARBY"');
+  });
+
+  it("puts add-task in the header and supports self-wager plus friend challenges", () => {
+    expect(screen).toContain(
+      'accessibilityLabel="Add a task or challenge a friend"',
+    );
+    expect(add).toContain("QUEST");
+    expect(add).not.toContain("MY TASK");
+    expect(add).not.toContain("CHALLENGE A FRIEND");
+    expect(add).toContain("CHALLENGE PLAYER");
+    expect(add).toContain("SELF-WAGER");
+    expect(add).toContain("SEND CHALLENGE");
+  });
+
+  it("color-codes own tasks yellow and challenges/system quests red", () => {
+    expect(row).toContain("yellow");
+    expect(row).toContain("red");
+    expect(row).toContain("⚠");
+    expect(row).toContain("Needs attention");
+  });
+
+  it("resolves pending challenges in an overlay", () => {
+    expect(overlay).toContain("ACCEPT");
+    expect(overlay).toContain("DECLINE");
+    expect(overlay).toContain("Declining");
+    expect(overlay).toContain("no penalty");
+    expect(overlay).toContain("never shares your location");
+    expect(overlay).toContain("WAGER");
+    expect(screen).toContain("attention: false");
+  });
 
   it.each([
     "loading",
@@ -37,34 +73,10 @@ describe("quest PWA surface", () => {
     "expired",
     "conflict",
     "complete",
-  ])("defines the %s state", (state) => expect(states).toContain(state));
-
-  it("states challenge consent and location privacy", () => {
-    expect(challenge).toContain("Declining has no penalty");
-    expect(challenge).toMatch(/never\s+shares your location/);
-  });
-
-  it("uses accessible tabs and controls", () => {
-    expect(screen).toContain('accessibilityRole="tablist"');
-    expect(screen).toContain('accessibilityRole="tab"');
-    expect(screen).toContain('accessibilityRole="button"');
-  });
-
-  it("converts list items into active quests instead of a hidden reveal", () => {
-    expect(screen).toContain('setSection("ACTIVE")');
-    expect(screen).toContain("setCustomActive");
-    expect(screen).toContain("just evolved into a live quest");
-  });
-
-  it("offers challenge construction, classification, barter and delivery", () => {
-    expect(composer).toContain("CHALLENGE PLAYER");
-    expect(composer).toContain("symmetric barter");
-    expect(composer).toContain("SEND CHALLENGE");
-    expect(challenge).toContain("% COMPLETE");
-  });
+  ])("still defines the %s state", (state) => expect(states).toContain(state));
 
   it.each(["OBJECTIVE", "TIME", "LOCATION", "FIELD NOTES"])(
-    "renders quest briefing detail %s",
+    "keeps quest briefing detail %s",
     (label) => expect(briefing).toContain(label),
   );
 });

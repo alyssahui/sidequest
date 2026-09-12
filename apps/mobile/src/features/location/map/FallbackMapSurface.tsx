@@ -124,7 +124,7 @@ export function FallbackMapSurface({
           <Pressable
             accessibilityLabel={`${style.accessibilityPrefix}. ${marker.title}.${
               distance === null ? "" : ` ${formatDistance(distance)}.`
-            } Reward ${marker.rewardCoins} coins.`}
+            } Reward ${marker.rewardCoins} credit.`}
             accessibilityRole="button"
             accessibilityState={{ selected }}
             key={marker.id}

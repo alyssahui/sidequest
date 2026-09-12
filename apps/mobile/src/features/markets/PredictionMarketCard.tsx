@@ -1,27 +1,23 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type {
-  MarketBetDto,
-  MarketOutcome,
-  MarketStatus,
-} from "@sidequest/contracts/market";
-import { estimatedPayout } from "@sidequest/market-core";
+import type { MarketDto, MarketOutcome } from "@sidequest/contracts/market";
+import { estimatedPayout, poolTotals } from "@sidequest/market-core";
 import { CoinAmount, HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 
-const demoBets: MarketBetDto[] = [
+const fallbackBets = [
   {
     id: "demo-1",
     bettorId: "alyssa",
-    outcome: "COMPLETE",
+    outcome: "COMPLETE" as const,
     amount: 80,
     createdAt: "1",
   },
   {
     id: "demo-2",
     bettorId: "chris",
-    outcome: "FAIL",
+    outcome: "FAIL" as const,
     amount: 210,
     createdAt: "2",
   },
@@ -30,24 +26,47 @@ const demoBets: MarketBetDto[] = [
 type Props = {
   participantName: string;
   closesLabel: string;
-  status?: MarketStatus;
+  market?: MarketDto;
+  viewerId?: string;
+  status?: MarketDto["status"];
   balance?: number;
+  onPlaced?: (outcome: MarketOutcome, amount: number) => void;
 };
 
 export function PredictionMarketCard({
   participantName,
   closesLabel,
-  status = "OPEN",
+  market,
+  viewerId,
+  status,
   balance = 110,
+  onPlaced,
 }: Props) {
   const [outcome, setOutcome] = useState<MarketOutcome>("COMPLETE");
   const [amount, setAmount] = useState(25);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const bets = market?.bets ?? fallbackBets;
+  const pools = market ? market.pools : poolTotals(bets);
+  const marketStatus = market?.status ?? status ?? "OPEN";
+  const selfBlocked =
+    Boolean(viewerId) &&
+    Boolean(market?.participantUserId) &&
+    viewerId === market?.participantUserId;
   const estimate = useMemo(
-    () => estimatedPayout(demoBets, outcome, amount),
-    [amount, outcome],
+    () => estimatedPayout(bets, outcome, amount),
+    [amount, bets, outcome],
   );
-  const disabled = status !== "OPEN" || amount > balance;
+  const closed = marketStatus !== "OPEN";
+  const insufficient = amount > balance;
+  const disabled = closed || insufficient || selfBlocked;
+
+  const submitLabel = selfBlocked
+    ? "YOU CANNOT PREDICT YOURSELF"
+    : closed
+      ? marketStatus
+      : insufficient
+        ? "NOT ENOUGH CREDIT"
+        : "CONFIRM PREDICTION";
 
   return (
     <HudCard
@@ -58,9 +77,11 @@ export function PredictionMarketCard({
         <StatusPill label="PARTY PREDICTION" />
         <CoinAmount amount={balance} />
       </View>
-      <Text style={styles.title}>Will {participantName} actually do it?</Text>
+      <Text style={styles.title}>
+        {market?.prompt ?? `Will ${participantName} actually do it?`}
+      </Text>
       <Text style={styles.caption}>
-        {closesLabel} · Virtual Coins have no monetary value.
+        {closesLabel} · Virtual credit has no monetary value.
       </Text>
 
       <View accessibilityRole="radiogroup" style={styles.outcomes}>
@@ -81,9 +102,7 @@ export function PredictionMarketCard({
             <Text style={styles.outcomeLabel}>
               {choice === "COMPLETE" ? "✓ COMPLETE" : "× FAIL"}
             </Text>
-            <Text style={styles.pool}>
-              {choice === "COMPLETE" ? "◉ 80" : "◉ 210"} in pool
-            </Text>
+            <Text style={styles.pool}>◉ {pools[choice]} in pool</Text>
           </Pressable>
         ))}
       </View>
@@ -113,19 +132,21 @@ export function PredictionMarketCard({
         ))}
       </View>
       <Text style={styles.estimate}>
-        Estimated total if correct: ◉ {estimate}
+        Estimated total if correct: ◉ {estimate}. Later predictions can change
+        this number.
       </Text>
 
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         disabled={disabled}
-        onPress={() => setReceipt(`${outcome} · ◉ ${amount} committed`)}
+        onPress={() => {
+          setReceipt(`${outcome} · ◉ ${amount} committed`);
+          onPlaced?.(outcome, amount);
+        }}
         style={[styles.submit, disabled && styles.disabled]}
       >
-        <Text style={styles.submitLabel}>
-          {status === "OPEN" ? "CONFIRM PREDICTION" : status}
-        </Text>
+        <Text style={styles.submitLabel}>{submitLabel}</Text>
       </Pressable>
       {receipt ? (
         <Text accessibilityRole="alert" style={styles.receipt}>
@@ -203,6 +224,7 @@ const styles = StyleSheet.create({
     color: colors.inkInverse,
     fontWeight: "900",
     letterSpacing: 0.8,
+    textAlign: "center",
   },
   receipt: {
     color: colors.brandDeep,
@@ -219,10 +241,10 @@ export function SelfBountyCard({ balance = 110 }: { balance?: number }) {
   return (
     <HudCard accessibilityLabel="Self-bounty commitment">
       <StatusPill label="BACK YOURSELF" />
-      <Text style={styles.title}>Put Coins behind your promise</Text>
+      <Text style={styles.title}>Put credit behind your promise</Text>
       <Text style={styles.caption}>
-        Finish and your stake returns. Miss it and the Coins are forfeited. No
-        new Coins are created.
+        This is not a prediction on yourself. Finish and your stake returns.
+        Miss it and the credit is forfeited. No new credit is created.
       </Text>
       <View style={styles.stakes}>
         {[10, 25, 50].map((stake) => (

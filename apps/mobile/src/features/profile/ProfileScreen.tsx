@@ -1,29 +1,83 @@
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
 
 import { CoinAmount, HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 
 import { ScreenFrame } from "../shell/ScreenFrame";
+import { getPreferences, type PreferenceState } from "./preferencesStore";
 
-const tags = ["Food", "Photography", "Weird stores", "Hiking"];
+const LOGGED_IN_USER = "zuri";
 
 export function ProfileScreen() {
+  const router = useRouter();
+  const isSelf = LOGGED_IN_USER === "zuri";
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [dummy, setDummy] = useState<string | null>(null);
+  const [preferences, setPreferences] =
+    useState<PreferenceState>(getPreferences());
+
+  useFocusEffect(
+    useCallback(() => {
+      setPreferences(getPreferences());
+    }, []),
+  );
+
   return (
     <ScreenFrame eyebrow="CONFIGURE YOUR CHARACTER" title="ZURI">
-      <HudCard style={styles.identity}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>Z</Text>
-        </View>
-        <View style={styles.grow}>
-          <Text style={styles.level}>LEVEL 8 · THE EXPLORER</Text>
-          <Text style={styles.meta}>14 quests together this month</Text>
-        </View>
-        <CoinAmount amount={420} />
-      </HudCard>
+      <Pressable
+        accessibilityHint={
+          isSelf ? "Shows account actions for your profile" : undefined
+        }
+        accessibilityLabel="Your profile card"
+        accessibilityRole="button"
+        onPress={() => {
+          if (isSelf) setActionsOpen((open) => !open);
+        }}
+      >
+        <HudCard style={styles.identity}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>Z</Text>
+          </View>
+          <View style={styles.grow}>
+            <Text style={styles.level}>LEVEL 8 · THE EXPLORER</Text>
+            <Text style={styles.meta}>14 quests together this month</Text>
+          </View>
+          <CoinAmount amount={420} />
+        </HudCard>
+      </Pressable>
+
+      {isSelf && actionsOpen ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setDummy("Account settings are coming soon.")}
+            style={styles.action}
+          >
+            <Text style={styles.actionText}>ACCOUNT</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/profile/preferences")}
+            style={styles.actionFill}
+          >
+            <Text style={styles.actionFillText}>SET PREFERENCES</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setDummy("Notification settings are coming soon.")}
+            style={styles.action}
+          >
+            <Text style={styles.actionText}>NOTIFICATIONS</Text>
+          </Pressable>
+          {dummy ? <Text style={styles.dummy}>{dummy}</Text> : null}
+        </>
+      ) : null}
 
       <Text style={styles.section}>I LIKE</Text>
       <View style={styles.tags}>
-        {tags.map((tag) => (
+        {preferences.likes.map((tag) => (
           <StatusPill key={tag} label={tag.toUpperCase()} />
         ))}
       </View>
@@ -33,7 +87,19 @@ export function ProfileScreen() {
         <View style={styles.scale}>
           <Text style={styles.meta}>CHILL</Text>
           <View style={styles.scaleTrack}>
-            <View style={styles.scaleFill} />
+            <View
+              style={[
+                styles.scaleFill,
+                {
+                  width:
+                    preferences.questStyle === "CHILL"
+                      ? "24%"
+                      : preferences.questStyle === "UNHINGED"
+                        ? "92%"
+                        : "68%",
+                },
+              ]}
+            />
           </View>
           <Text style={styles.meta}>UNHINGED</Text>
         </View>
@@ -65,6 +131,24 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   level: { color: colors.ink, fontWeight: "900" },
   meta: { color: colors.muted, fontSize: 12, marginTop: spacing.xs },
+  action: {
+    alignItems: "center",
+    borderColor: colors.surface,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  actionText: { color: colors.surface, fontWeight: "900" },
+  actionFill: {
+    alignItems: "center",
+    backgroundColor: colors.brand,
+    borderRadius: radii.sm,
+    justifyContent: "center",
+    minHeight: 48,
+  },
+  actionFillText: { color: colors.ink, fontWeight: "900" },
+  dummy: { color: colors.brand, fontSize: 12, textAlign: "center" },
   section: { color: colors.brand, fontWeight: "900", letterSpacing: 1.5 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   label: { color: colors.ink, fontWeight: "900", marginVertical: spacing.sm },
@@ -79,7 +163,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandDeep,
     borderRadius: radii.pill,
     height: 10,
-    width: "68%",
   },
   privacyButton: {
     alignItems: "center",

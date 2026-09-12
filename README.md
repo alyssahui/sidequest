@@ -29,7 +29,7 @@ To force the deterministic location walk instead of requesting browser/device lo
 EXPO_PUBLIC_LOCATION_PROVIDER=SIMULATED corepack pnpm --filter @sidequest/mobile web
 ```
 
-On the Map tab, select a quest and start tracking to see the simulated player move toward it. The Quests tab includes the quest lifecycle, challenges, self-bounties, and the party prediction interface.
+On the Map tab, select a quest and start tracking to see the simulated player move toward it. The Quests tab includes the quest lifecycle and challenges. Party combines the roster with the story feed. Bet is the play-money COMPLETE / FAIL market for friends' accepted quests.
 
 ## Run the app and API together
 
@@ -103,8 +103,8 @@ Serve `apps/mobile/dist` through an HTTPS host for deployment. Browsers allow se
 
 - **Map:** grant location permission or use the simulator, inspect nearby quests, start/stop tracking, and open the privacy controls.
 - **Quests:** reveal and accept a nearby quest, simulate evidence, create a custom challenge, or turn a want/need into a quest.
-- **Predictions:** choose `COMPLETE` or `FAIL`, select a virtual-Coin stake, and confirm the prediction. Coins have no monetary value and cannot be purchased or cashed out.
-- **Party and Feed:** inspect the friendship-focused party and activity surfaces.
+- **Bet:** choose `COMPLETE` or `FAIL` on a friend's accepted quest, select a virtual-credit stake, and confirm. Credit has no monetary value and cannot be purchased or cashed out.
+- **Party:** inspect the roster under Squad and the activity story under Story.
 - **API:** use the tests in `apps/api/test` as executable examples for quest, location, market, and self-bounty requests.
 
 ## Native location note
@@ -124,6 +124,6 @@ packages/ui          Shared theme and React Native HUD components
 agents               Architecture contract and feature-agent instructions
 ```
 
-The canonical navigation is Map, Quests, Party, Feed, and Profile. Prediction markets are contextual rather than a separate tab. Quest lifecycle, location evidence, and market settlement remain isolated in feature packages and are composed by the API and mobile apps.
+The canonical navigation is Map, Quests, Party, Bet, and Profile. Quest lifecycle, location evidence, and market settlement remain isolated in feature packages and are composed by the API and mobile apps.
 
 Contributors working on separate branches should read [`agents/README.md`](agents/README.md) and [`agents/SHARED_CONTRACT.md`](agents/SHARED_CONTRACT.md) before editing integration surfaces.

@@ -16,6 +16,10 @@
     },
     "android": {
       "package": "com.sidequest.game"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
     }
   }
 }

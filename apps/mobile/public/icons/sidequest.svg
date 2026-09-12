@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">SideQuest compass icon</title>
+  <rect width="512" height="512" rx="112" fill="#71272A"/>
+  <circle cx="256" cy="256" r="166" fill="#002F38" stroke="#F7EBC4" stroke-width="24"/>
+  <path d="M326 164 286 286 164 326l40-122 122-40Z" fill="#FF9A55" stroke="#F7EBC4" stroke-width="16" stroke-linejoin="round"/>
+  <circle cx="245" cy="245" r="23" fill="#71272A"/>
+</svg>

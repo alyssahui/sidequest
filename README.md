@@ -6,7 +6,7 @@ HackCMU 2026 — a multiplayer game layered onto real life. Friends discover nea
 
 The repository is a TypeScript pnpm workspace:
 
-- `apps/mobile`: Expo SDK 57 + Expo Router mobile shell
+- `apps/mobile`: Expo SDK 57 + Expo Router app for iOS, Android, and installable PWA
 - `apps/api`: Fastify API shell with credential-free demo adapters
 - `packages/contracts`: framework-free integration types and ports
 - `packages/ui`: shared SideQuest theme and mobile HUD primitives
@@ -27,6 +27,20 @@ Run the API separately:
 ```bash
 corepack pnpm dev:api
 ```
+
+Run the web/PWA version during development:
+
+```bash
+corepack pnpm --filter @sidequest/mobile web
+```
+
+Create the deployable static PWA in `apps/mobile/dist`:
+
+```bash
+corepack pnpm build:web
+```
+
+The production PWA must be served over HTTPS for service workers and browser location permissions. The generated service worker precaches the static app shell but deliberately does not cache authenticated API responses.
 
 Verify the workspace:
 

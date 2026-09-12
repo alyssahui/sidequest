@@ -13,6 +13,7 @@ import type {
   EconomyPort,
   IdGenerator,
   PartyMembershipPort,
+  QuestGpsEvidenceService,
 } from "@sidequest/contracts";
 import {
   CryptoIdGenerator,
@@ -23,6 +24,8 @@ import {
 } from "../../foundation/demoAdapters";
 
 type DemoQuestOverrides = {
+  /** Supplied by the API so GPS verification is backed by the location module. */
+  gps?: QuestGpsEvidenceService;
   clock?: Clock;
   ids?: IdGenerator;
   economy?: EconomyPort;
@@ -40,7 +43,7 @@ export function createDemoQuestRuntime(overrides: DemoQuestOverrides = {}) {
   const verification = new VerificationRegistry(
     clock,
     ids,
-    new DeterministicGpsEvidenceService(),
+    overrides.gps ?? new DeterministicGpsEvidenceService(),
     new DemoPhotoReview(),
   );
   const services = {

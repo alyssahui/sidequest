@@ -12,6 +12,7 @@ export interface QuestRepository {
 }
 export interface TemplateRepository {
   get(id: string): Promise<QuestTemplate | undefined>;
+  save(value: QuestTemplate): Promise<void>;
   list(): Promise<QuestTemplate[]>;
 }
 export interface AttemptRepository {

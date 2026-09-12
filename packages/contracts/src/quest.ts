@@ -52,6 +52,13 @@ export type QuestTemplate = {
   rewardRange: { min: number; max: number };
   version: number;
 };
+export type QuestBriefing = {
+  explanation: string;
+  objective: string;
+  timeLabel: string;
+  locationLabel: string;
+  notes: string[];
+};
 export type QuestSource = {
   type: "SPAWN" | "CHALLENGE" | "WANT_NEED";
   sourceId?: string;
@@ -64,6 +71,7 @@ export type QuestInstance = {
   participantIds: string[];
   title: string;
   description: string;
+  briefing: QuestBriefing;
   rewardCoins: number;
   requirements: VerificationRequirement[];
   source: QuestSource;

@@ -9,6 +9,9 @@ export function ChallengeCard({
   expires,
   onAccept,
   onDecline,
+  status = "PENDING",
+  progress = 0,
+  explanation,
 }: {
   direction: "INCOMING" | "OUTGOING";
   person: string;
@@ -17,6 +20,9 @@ export function ChallengeCard({
   expires: string;
   onAccept?: () => void;
   onDecline?: () => void;
+  status?: string;
+  progress?: number;
+  explanation?: string;
 }) {
   return (
     <HudCard
@@ -30,7 +36,13 @@ export function ChallengeCard({
       <Text style={styles.meta}>
         {person} · symmetric stake · {expires} left
       </Text>
-      {direction === "INCOMING" ? (
+      <Text style={styles.status}>
+        STATUS: {status} · {progress}% COMPLETE
+      </Text>
+      {explanation ? (
+        <Text style={styles.explanation}>{explanation}</Text>
+      ) : null}
+      {direction === "INCOMING" && status === "PENDING" ? (
         <>
           <Text style={styles.safe}>
             Accept only if you want to. Declining has no penalty and never
@@ -55,7 +67,11 @@ export function ChallengeCard({
         </>
       ) : (
         <Text style={styles.safe}>
-          Waiting for their choice. No location is shared before acceptance.
+          {status === "REJECTED"
+            ? "Challenge declined. Every escrowed coin is returned—no hard feelings."
+            : status === "ACCEPTED"
+              ? "Duel live! Progress and final outcome notices will appear right here."
+              : "Delivered and waiting for their choice. No location is shared before acceptance."}
         </Text>
       )}
     </HudCard>
@@ -74,6 +90,18 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   meta: { color: colors.ink, marginTop: spacing.sm },
+  status: {
+    color: colors.brandDeep,
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: spacing.sm,
+  },
+  explanation: {
+    color: colors.ink,
+    fontWeight: "700",
+    lineHeight: 21,
+    marginTop: spacing.md,
+  },
   safe: { color: colors.muted, lineHeight: 21, marginTop: spacing.md },
   actions: { gap: spacing.sm, marginTop: spacing.md },
   accept: {

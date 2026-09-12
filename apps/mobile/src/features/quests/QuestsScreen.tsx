@@ -5,6 +5,10 @@ import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 import { ScreenFrame } from "../shell/ScreenFrame";
 import { ChallengeCard } from "../challenges/ChallengeCard";
 import {
+  ChallengeComposer,
+  type ComposedChallenge,
+} from "../challenges/ChallengeComposer";
+import {
   demoActive,
   demoChallenges,
   demoItems,
@@ -13,7 +17,12 @@ import {
 } from "./demoData";
 import { QuestStatePanel, type QuestViewState } from "./QuestStatePanel";
 import { SpawnReveal } from "./SpawnReveal";
+import { QuestBriefing, type QuestBriefingData } from "./QuestBriefing";
 const sections: QuestSection[] = ["ACTIVE", "NEARBY", "CHALLENGES", "MY LIST"];
+type ChallengeView = Omit<ComposedChallenge, "status" | "direction"> & {
+  direction: "INCOMING" | "OUTGOING";
+  status: string;
+};
 export function QuestsScreen() {
   const [section, setSection] = useState<QuestSection>("ACTIVE");
   const [state, setState] = useState<QuestViewState>("ready");
@@ -22,6 +31,13 @@ export function QuestsScreen() {
     { id: string; kind: "WANT" | "NEED"; text: string }[]
   >(demoItems.map((x) => ({ ...x })));
   const [draft, setDraft] = useState("");
+  const [customActive, setCustomActive] = useState<{
+    title: string;
+    briefing: QuestBriefingData;
+  }>();
+  const [challenges, setChallenges] = useState<ChallengeView[]>(
+    demoChallenges.map((challenge) => ({ ...challenge })),
+  );
   return (
     <ScreenFrame eyebrow="YOUR ADVENTURES · DEMO MODE" title="QUESTS">
       <View accessibilityRole="tablist" style={styles.tabs}>
@@ -46,7 +62,7 @@ export function QuestsScreen() {
       </View>
       <QuestStatePanel state={state} onAction={() => setState("ready")} />
       {state === "ready" && section === "ACTIVE" ? (
-        <Active onVerify={() => setState("complete")} />
+        <Active custom={customActive} onVerify={() => setState("complete")} />
       ) : null}
       {state === "ready" && section === "NEARBY" ? (
         <>
@@ -83,16 +99,40 @@ export function QuestsScreen() {
           )}
         </>
       ) : null}
-      {state === "ready" && section === "CHALLENGES"
-        ? demoChallenges.map((c) => (
+      {state === "ready" && section === "CHALLENGES" ? (
+        <>
+          <ChallengeComposer
+            onSend={(challenge) =>
+              setChallenges((current) => [challenge, ...current])
+            }
+          />
+          {challenges.map((c) => (
             <ChallengeCard
               key={c.id}
               {...c}
-              onAccept={() => setSection("ACTIVE")}
-              onDecline={() => setState("empty")}
+              onAccept={() => {
+                setChallenges((current) =>
+                  current.map((challenge) =>
+                    challenge.id === c.id
+                      ? { ...challenge, status: "ACCEPTED", progress: 10 }
+                      : challenge,
+                  ),
+                );
+                setSection("ACTIVE");
+              }}
+              onDecline={() =>
+                setChallenges((current) =>
+                  current.map((challenge) =>
+                    challenge.id === c.id
+                      ? { ...challenge, status: "REJECTED", progress: 100 }
+                      : challenge,
+                  ),
+                )
+              }
             />
-          ))
-        : null}
+          ))}
+        </>
+      ) : null}
       {state === "ready" && section === "MY LIST" ? (
         <>
           <HudCard accessibilityLabel="Add a want or need">
@@ -132,7 +172,27 @@ export function QuestsScreen() {
               <View style={styles.itemActions}>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setReveal("cmu-teach")}
+                  onPress={() => {
+                    const now = new Date();
+                    const deadline = new Date(now.getTime() + 24 * 3_600_000);
+                    setCustomActive({
+                      title: item.text,
+                      briefing: {
+                        explanation: `🚀 Your ${item.kind.toLowerCase()} just evolved into a live quest! “${item.text}” now has a clear finish line, flexible proof, and zero shame if plans change.`,
+                        objective: item.text,
+                        timeLabel: `Finish by ${deadline.toLocaleString()}`,
+                        locationLabel: "Choose a safe, appropriate location",
+                        notes: [
+                          "Generated from My List",
+                          "Edit the plan or skip without penalty",
+                        ],
+                      },
+                    });
+                    setItems((current) =>
+                      current.filter((candidate) => candidate.id !== item.id),
+                    );
+                    setSection("ACTIVE");
+                  }}
                   style={styles.small}
                 >
                   <Text style={styles.smallText}>TURN INTO QUEST</Text>
@@ -162,14 +222,22 @@ export function QuestsScreen() {
     </ScreenFrame>
   );
 }
-function Active({ onVerify }: { onVerify: () => void }) {
+function Active({
+  onVerify,
+  custom,
+}: {
+  onVerify: () => void;
+  custom?: { title: string; briefing: QuestBriefingData };
+}) {
   return (
-    <HudCard accessibilityLabel={`Active quest: ${demoActive.title}`}>
+    <HudCard
+      accessibilityLabel={`Active quest: ${custom?.title ?? demoActive.title}`}
+    >
       <View style={styles.row}>
         <StatusPill label="IN PROGRESS" />
         <CoinAmount amount={demoActive.reward} />
       </View>
-      <Text style={styles.title}>{demoActive.title}</Text>
+      <Text style={styles.title}>{custom?.title ?? demoActive.title}</Text>
       <Text style={styles.meta}>
         {demoActive.deadline} · {demoActive.participants}
       </Text>
@@ -180,6 +248,7 @@ function Active({ onVerify }: { onVerify: () => void }) {
           </Text>
         ))}
       </View>
+      <QuestBriefing briefing={custom?.briefing ?? demoActive.briefing} />
       <Text style={styles.privacy}>
         GPS is checked only for this active quest. Photos require review and
         should not contain private documents.

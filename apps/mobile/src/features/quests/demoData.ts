@@ -5,6 +5,15 @@ export const demoActive = {
   reward: 30,
   participants: "You + Alyssa",
   steps: ["Reach the CMU area", "Upload current GPS", "Finish before deadline"],
+  briefing: {
+    explanation:
+      "⚡ Campus kindness quest locked in! Three tiny cleanups become one visible win for everyone sharing the space.",
+    objective:
+      "Collect three safe pieces of litter and place them in the correct bin.",
+    timeLabel: "Finish within 42 minutes",
+    locationLabel: "CMU campus public paths",
+    notes: ["Wear gloves or use a grabber", "Skip sharp or unsafe objects"],
+  },
 };
 export const demoNearby = [
   {
@@ -29,6 +38,9 @@ export const demoChallenges = [
     stake: 25,
     expires: "58 min",
     status: "PENDING",
+    progress: 0,
+    explanation:
+      "🔥 Ben sent a quick learning duel. Accept only if the mission fits your day.",
   },
   {
     id: "challenge-alyssa",
@@ -38,6 +50,9 @@ export const demoChallenges = [
     stake: 15,
     expires: "2 hrs",
     status: "PENDING",
+    progress: 0,
+    explanation:
+      "⚡ Delivered to Alyssa. Your 15 coins are safely held while she decides.",
   },
 ] as const;
 export const demoItems = [

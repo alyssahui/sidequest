@@ -13,6 +13,14 @@ const challenge = readFileSync(
   new URL("../src/features/challenges/ChallengeCard.tsx", import.meta.url),
   "utf8",
 );
+const composer = readFileSync(
+  new URL("../src/features/challenges/ChallengeComposer.tsx", import.meta.url),
+  "utf8",
+);
+const briefing = readFileSync(
+  new URL("../src/features/quests/QuestBriefing.tsx", import.meta.url),
+  "utf8",
+);
 
 describe("quest PWA surface", () => {
   it.each(["ACTIVE", "NEARBY", "CHALLENGES", "MY LIST"])(
@@ -41,4 +49,22 @@ describe("quest PWA surface", () => {
     expect(screen).toContain('accessibilityRole="tab"');
     expect(screen).toContain('accessibilityRole="button"');
   });
+
+  it("converts list items into active quests instead of a hidden reveal", () => {
+    expect(screen).toContain('setSection("ACTIVE")');
+    expect(screen).toContain("setCustomActive");
+    expect(screen).toContain("just evolved into a live quest");
+  });
+
+  it("offers challenge construction, classification, barter and delivery", () => {
+    expect(composer).toContain("CHALLENGE PLAYER");
+    expect(composer).toContain("symmetric barter");
+    expect(composer).toContain("SEND CHALLENGE");
+    expect(challenge).toContain("% COMPLETE");
+  });
+
+  it.each(["OBJECTIVE", "TIME", "LOCATION", "FIELD NOTES"])(
+    "renders quest briefing detail %s",
+    (label) => expect(briefing).toContain(label),
+  );
 });

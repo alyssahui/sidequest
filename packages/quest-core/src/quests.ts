@@ -12,6 +12,7 @@ import type {
   EvidenceSubmission,
 } from "@sidequest/contracts";
 import { QuestError } from "./errors";
+import { QuestContentService } from "./content";
 import type {
   AttemptRepository,
   IdempotencyStore,
@@ -42,6 +43,7 @@ export type QuestDependencies = {
   verification: VerificationRegistry;
 };
 export class QuestService {
+  private readonly content = new QuestContentService();
   constructor(private readonly d: QuestDependencies) {}
   async spawn(input: {
     templateId: string;
@@ -73,6 +75,14 @@ export class QuestService {
           ],
           title: template.title,
           description: template.description,
+          briefing: this.content.briefing(
+            template,
+            input.expiresAt,
+            undefined,
+            input.source?.type === "WANT_NEED"
+              ? "Generated from your list item—edit the plan until it feels right."
+              : undefined,
+          ),
           rewardCoins: reward,
           requirements: structuredClone(template.defaultRequirements),
           source: input.source ?? { type: "SPAWN" },

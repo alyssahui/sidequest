@@ -16,9 +16,53 @@ const fail = (reply: FastifyReply, e: unknown) => {
     .send({ code, message: code });
 };
 export const challengeRoutes: FastifyPluginAsync = async (app) => {
-  app.get("/challenges", async (request) => ({
-    challenges: await demoChallengeService.list(request.principal.userId),
-  }));
+  app.get("/challenges", async (request) => {
+    const challenges = await demoChallengeService.list(
+      request.principal.userId,
+    );
+    return {
+      incoming: challenges.filter(
+        (challenge) => challenge.recipientUserId === request.principal.userId,
+      ),
+      outgoing: challenges.filter(
+        (challenge) => challenge.issuerUserId === request.principal.userId,
+      ),
+    };
+  });
+  app.post("/challenges/assess", async (request, reply) => {
+    try {
+      const body = request.body as {
+        recipientUserId: string;
+        partyId: string;
+        task: string;
+        locationLabel?: string;
+        notes?: string;
+        deadline: string;
+      };
+      return demoChallengeService.assessDraft(body);
+    } catch (error) {
+      return fail(reply, error);
+    }
+  });
+  app.post("/challenges/custom", async (request, reply) => {
+    try {
+      const body = request.body as {
+        recipientUserId: string;
+        partyId: string;
+        task: string;
+        locationLabel?: string;
+        notes?: string;
+        deadline: string;
+      };
+      return await demoChallengeService.issueCustom({
+        ...body,
+        issuerUserId: request.principal.userId,
+        idempotencyKey: idempotency(request.headers),
+      });
+    } catch (error) {
+      return fail(reply, error);
+    }
+  });
   app.post("/challenges", async (request, reply) => {
     try {
       const b = request.body as {
@@ -48,6 +92,22 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
       });
     } catch (e) {
       return fail(reply, e);
+    }
+  });
+  app.post("/challenges/:id/progress", async (request, reply) => {
+    try {
+      const body = request.body as {
+        progressPercent: number;
+        expectedVersion: number;
+      };
+      return await demoChallengeService.updateProgress({
+        challengeId: (request.params as { id: string }).id,
+        recipientUserId: request.principal.userId,
+        ...body,
+        idempotencyKey: idempotency(request.headers),
+      });
+    } catch (error) {
+      return fail(reply, error);
     }
   });
 };

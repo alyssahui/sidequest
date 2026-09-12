@@ -12,13 +12,37 @@ export type Challenge = {
   recipientUserId: string;
   partyId: string;
   questTemplateId: string;
+  title: string;
+  description: string;
+  category: import("./quest").QuestCategory;
+  explanation: string;
   stakeCoins: number;
   status: ChallengeStatus;
   createdAt: string;
   expiresAt: string;
   questId?: string;
   resolvedAt?: string;
+  progressPercent: number;
+  lastNotice?: string;
   version: number;
+};
+export type ChallengeDraft = {
+  recipientUserId: string;
+  partyId: string;
+  task: string;
+  locationLabel?: string;
+  notes?: string;
+  deadline: string;
+};
+export type ChallengeAssessment = {
+  title: string;
+  description: string;
+  category: import("./quest").QuestCategory;
+  tags: string[];
+  explanation: string;
+  suggestedStakeCoins: number;
+  requirements: import("./quest").VerificationRequirement[];
+  safety: { accepted: boolean; reason: string };
 };
 export interface SocialSafetyPort {
   canInteract(

@@ -1,4 +1,5 @@
 export * from "./challenges";
+export * from "./content";
 export * from "./errors";
 export * from "./quests";
 export * from "./repositories";

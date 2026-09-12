@@ -6,7 +6,11 @@ import type {
   IdGenerator,
   PartyMembershipPort,
   SocialSafetyPort,
+  ChallengeAssessment,
+  ChallengeDraft,
+  QuestTemplate,
 } from "@sidequest/contracts";
+import { QuestContentService } from "./content";
 import { QuestError } from "./errors";
 import type {
   ChallengeRepository,
@@ -31,9 +35,59 @@ export type ChallengeDependencies = {
 export class ChallengeService {
   private readonly min: number;
   private readonly max: number;
+  private readonly content = new QuestContentService();
   constructor(private readonly d: ChallengeDependencies) {
     this.min = d.minStake ?? 1;
     this.max = d.maxStake ?? 500;
+  }
+  assessDraft(draft: ChallengeDraft): ChallengeAssessment {
+    return this.content.assessChallenge(draft);
+  }
+  async issueCustom(
+    input: ChallengeDraft & {
+      issuerUserId: string;
+      idempotencyKey: string;
+    },
+  ): Promise<Challenge> {
+    return this.once(
+      "issue-custom",
+      input.issuerUserId,
+      input.idempotencyKey,
+      async () => {
+        const assessment = this.assessDraft(input);
+        if (!assessment.safety.accepted)
+          throw new QuestError("INVALID_CHALLENGE");
+        const templateId = this.d.ids.next();
+        const template: QuestTemplate = {
+          id: templateId,
+          title: assessment.title,
+          description: assessment.description,
+          category: assessment.category,
+          tags: assessment.tags,
+          safety: { risk: "LOW", moderation: "APPROVED", flags: [] },
+          spawnRules: {
+            areas: [input.locationLabel?.trim() || "ANYWHERE"],
+            placeCategories: [],
+            social: "either",
+            minimumNearbyMembers: 0,
+            cooldownHours: 0,
+          },
+          defaultRequirements: assessment.requirements,
+          rewardRange: { min: 0, max: 0 },
+          version: 1,
+        };
+        await this.d.templates.save(template);
+        return this.issue({
+          issuerUserId: input.issuerUserId,
+          recipientUserId: input.recipientUserId,
+          partyId: input.partyId,
+          questTemplateId: templateId,
+          stakeCoins: assessment.suggestedStakeCoins,
+          expiresAt: input.deadline,
+          idempotencyKey: `custom:${input.idempotencyKey}`,
+        });
+      },
+    );
   }
   async issue(input: {
     issuerUserId: string;
@@ -97,10 +151,17 @@ export class ChallengeService {
           recipientUserId: input.recipientUserId,
           partyId: input.partyId,
           questTemplateId: input.questTemplateId,
+          title: template.title,
+          description: template.description,
+          category: template.category,
+          explanation: this.content.briefing(template, input.expiresAt)
+            .explanation,
           stakeCoins: input.stakeCoins,
           status: "PENDING",
           createdAt: now.toISOString(),
           expiresAt: input.expiresAt,
+          progressPercent: 0,
+          lastNotice: "Challenge delivered. Waiting for their call.",
           version: 1,
         };
         await this.d.challenges.save(c);
@@ -138,6 +199,7 @@ export class ChallengeService {
         const old = c.version;
         if (!input.accept) {
           c.status = "DECLINED";
+          c.lastNotice = "Challenge declined—your full barter was returned.";
           await this.d.economy.apply({
             operationId: `challenge-refund:${c.id}`,
             userId: c.issuerUserId,
@@ -169,6 +231,8 @@ export class ChallengeService {
           });
           c.questId = quest.id;
           c.status = "ACCEPTED";
+          c.progressPercent = 10;
+          c.lastNotice = "Duel accepted! The quest is now live.";
           await this.publish("challenge.accepted", c, input.idempotencyKey);
         }
         c.version++;
@@ -195,11 +259,59 @@ export class ChallengeService {
         relatedEntityId: c.id,
       });
       c.status = recipientWins ? "COMPLETED" : "FAILED";
+      c.progressPercent = 100;
+      c.lastNotice = recipientWins
+        ? `Quest crushed! ${c.recipientUserId} claimed the ${c.stakeCoins * 2}-coin pot.`
+        : `Time! ${c.issuerUserId} reclaimed the ${c.stakeCoins * 2}-coin pot.`;
       c.resolvedAt = this.d.clock.now().toISOString();
       c.version++;
       await this.d.challenges.save(c, old);
+      await this.publish(
+        recipientWins ? "challenge.completed" : "challenge.failed",
+        c,
+        input.idempotencyKey,
+      );
       return c;
     });
+  }
+  async updateProgress(input: {
+    challengeId: string;
+    recipientUserId: string;
+    progressPercent: number;
+    expectedVersion: number;
+    idempotencyKey: string;
+  }): Promise<Challenge> {
+    return this.once(
+      "progress",
+      input.recipientUserId,
+      input.idempotencyKey,
+      async () => {
+        const challenge = await this.get(input.challengeId);
+        if (challenge.recipientUserId !== input.recipientUserId)
+          throw new QuestError("NOT_AUTHORIZED");
+        if (challenge.version !== input.expectedVersion)
+          throw new QuestError("VERSION_CONFLICT");
+        if (challenge.status !== "ACCEPTED")
+          throw new QuestError("INVALID_TRANSITION");
+        if (
+          !Number.isSafeInteger(input.progressPercent) ||
+          input.progressPercent <= challenge.progressPercent ||
+          input.progressPercent >= 100
+        )
+          throw new QuestError("INVALID_CHALLENGE");
+        const oldVersion = challenge.version;
+        challenge.progressPercent = input.progressPercent;
+        challenge.lastNotice = `Quest pulse: ${input.progressPercent}% complete. The duel is heating up!`;
+        challenge.version++;
+        await this.d.challenges.save(challenge, oldVersion);
+        await this.publish(
+          "challenge.progressed",
+          challenge,
+          input.idempotencyKey,
+        );
+        return challenge;
+      },
+    );
   }
   async expire(input: {
     challengeId: string;
@@ -214,6 +326,8 @@ export class ChallengeService {
         throw new QuestError("INVALID_TRANSITION");
       const old = c.version;
       c.status = "EXPIRED";
+      c.progressPercent = 100;
+      c.lastNotice = "Invitation expired—your full barter was returned.";
       c.resolvedAt = this.d.clock.now().toISOString();
       c.version++;
       await this.d.economy.apply({

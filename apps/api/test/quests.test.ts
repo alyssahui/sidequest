@@ -79,3 +79,44 @@ describe("quest API", () => {
     expect(evidence.json().code).toBe("PHOTO_REFERENCE_UNSAFE");
   });
 });
+
+describe("custom challenge API", () => {
+  it("assesses, classifies, prices, routes, and exposes an outgoing challenge", async () => {
+    const app = buildApp();
+    apps.push(app);
+    const payload = {
+      recipientUserId: "user-ben",
+      partyId: "party-demo",
+      task: "Teach one guitar chord",
+      locationLabel: "The Cut",
+      notes: "Acoustic is perfect",
+      deadline: "2099-09-12T18:00:00.000Z",
+    };
+    const assessment = await app.inject({
+      method: "POST",
+      url: "/v1/challenges/assess",
+      payload,
+    });
+    expect(assessment.statusCode).toBe(200);
+    expect(assessment.json()).toMatchObject({
+      category: "learn-teach",
+      safety: { accepted: true },
+    });
+    const sent = await app.inject({
+      method: "POST",
+      url: "/v1/challenges/custom",
+      headers: { "idempotency-key": "api-custom-challenge" },
+      payload,
+    });
+    expect(sent.statusCode).toBe(200);
+    expect(sent.json()).toMatchObject({
+      recipientUserId: "user-ben",
+      status: "PENDING",
+      progressPercent: 0,
+    });
+    const routed = await app.inject({ method: "GET", url: "/v1/challenges" });
+    expect(routed.json().outgoing).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: sent.json().id })]),
+    );
+  });
+});

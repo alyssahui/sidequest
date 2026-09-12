@@ -2,7 +2,20 @@ import { buildApp } from "./app";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
+import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
+
+// Local development secrets live at the repository root and are intentionally
+// ignored by Git. Load them before constructing the app so Grok and provider
+// adapters see the same environment whether the API is started from the root
+// script or from this workspace package. Deployment environments continue to
+// win because `loadEnvFile` does not replace existing process variables.
+try {
+  loadEnvFile(fileURLToPath(new URL("../../../.env", import.meta.url)));
+} catch (error) {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code !== "ENOENT") throw error;
+}
 
 const port = Number(process.env.PORT ?? 3000);
 const host = process.env.HOST ?? "0.0.0.0";

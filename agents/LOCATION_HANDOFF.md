@@ -1,6 +1,6 @@
 # Location branch — integration handoff
 
-**Branch:** `codex/location` · **HEAD:** `e531308` · pushed, **not merged**
+**Branch:** `codex/location` · **Tip:** `457d352` (code through `e531308`) · pushed, **not merged**
 **Scope:** location, proximity, GPS verification, the map, and the web/PWA shell
 **State:** `corepack pnpm check` green — 296 tests, format, typecheck across all 6 projects
 

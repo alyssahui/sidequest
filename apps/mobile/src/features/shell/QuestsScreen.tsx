@@ -3,6 +3,10 @@ import { StyleSheet, Text } from "react-native";
 import { HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, spacing, typeScale } from "@sidequest/ui/theme";
 
+import {
+  PredictionMarketCard,
+  SelfBountyCard,
+} from "../markets/PredictionMarketCard";
 import { ScreenFrame } from "./ScreenFrame";
 
 export function QuestsScreen() {
@@ -16,6 +20,11 @@ export function QuestsScreen() {
           Quest lifecycle UI will be supplied by the quests feature module.
         </Text>
       </HudCard>
+      <SelfBountyCard />
+      <PredictionMarketCard
+        participantName="Ben"
+        closesLabel="47 minutes remaining"
+      />
       <StatusPill label="NEARBY · 3" />
       <HudCard>
         <Text style={styles.title}>Something is happening nearby.</Text>

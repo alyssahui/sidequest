@@ -3,11 +3,14 @@ import Fastify from "fastify";
 import type { RequestPrincipal } from "@sidequest/contracts";
 
 import {
+  CryptoIdGenerator,
   DemoPartyMemberships,
   InMemoryEconomy,
   InMemoryEventBus,
+  SystemClock,
   demoPrincipal,
 } from "./foundation/demoAdapters";
+import { registerLocationModule } from "./modules/location";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -46,6 +49,20 @@ export function buildApp() {
     return {
       isMember: await memberships.isMember(request.principal.userId, partyId),
     };
+  });
+
+  // Location owns its own routes, storage, and retention timer. It exposes
+  // `gpsEvidence` for quest verification to consume in-process.
+  const location = registerLocationModule(app, {
+    events,
+    memberships,
+    clock: new SystemClock(),
+    ids: new CryptoIdGenerator(),
+    startRetentionSweep: process.env.NODE_ENV !== "test",
+  });
+
+  app.addHook("onClose", async () => {
+    location.stop();
   });
 
   return app;

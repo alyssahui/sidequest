@@ -1,0 +1,116 @@
+SIDEQUEST CODER HANDOFF PROMPTS
+==============================
+
+RUN ORDER
+---------
+
+Run Prompt 1 first. Review and merge codex/foundation-ui into main before sending Prompts 2, 3, and 4. The final three coders should all branch from the same updated main commit and may work concurrently.
+
+
+PROMPT 1 — UI/UX AND APP FOUNDATION
+------------------------------------
+
+You own SideQuest's UI/UX and repository foundation.
+
+Create branch: codex/foundation-ui
+
+Read these files completely before coding:
+- agents/README.md
+- agents/SHARED_CONTRACT.md
+- agents/01_UI_UX_APP.md
+- agents/INIT_PROMPTS.txt
+- everything in design/
+
+Then implement the task in agents/01_UI_UX_APP.md. Do not stop at planning. Build, test, and document the app foundation and deterministic demo mode.
+
+Preserve unrelated work. Commit your changes, push the branch, and report:
+1. commit SHA
+2. tests/checks run
+3. setup instructions
+4. assumptions or remaining integration work
+
+Do not merge the branch yourself.
+
+
+PROMPT 2 — LOCATION, PROXIMITY, AND GPS VERIFICATION
+----------------------------------------------------
+
+Begin only after codex/foundation-ui has been reviewed and merged.
+
+You own SideQuest's location, proximity, map, and GPS-verification systems.
+
+Update main, then create branch: codex/location
+
+Read these files completely before coding:
+- agents/README.md
+- agents/SHARED_CONTRACT.md
+- agents/02_LOCATION_TRACKING.md
+- agents/INIT_PROMPTS.txt
+- everything in design/
+
+Implement the complete task in agents/02_LOCATION_TRACKING.md. Follow the existing foundation and shared interfaces. Include privacy controls, permission/error states, automated tests, and a deterministic location simulator so the demo works without credentials.
+
+Stay within your ownership boundaries and isolate shared integration-file changes in a separate commit.
+
+Push the branch and report the commit SHA, checks run, device-testing requirements, and integration instructions. Do not merge it yourself.
+
+
+PROMPT 3 — VIRTUAL-COIN PREDICTION MARKET
+-----------------------------------------
+
+Begin only after codex/foundation-ui has been reviewed and merged.
+
+You own SideQuest's virtual-coin economy and Kalshi-style prediction system.
+
+Update main, then create branch: codex/markets
+
+Read these files completely before coding:
+- agents/README.md
+- agents/SHARED_CONTRACT.md
+- agents/03_PREDICTION_MARKET.md
+- agents/INIT_PROMPTS.txt
+- everything in design/
+
+Implement the complete task in agents/03_PREDICTION_MARKET.md. Build real domain/backend behavior—not only screens—with an append-only ledger, idempotent escrow and settlement, conservation-of-coins tests, contextual mobile UI, and a credential-free demo adapter.
+
+This is virtual play money only. Grok is optional and must never determine outcomes or move coins.
+
+Stay within your ownership boundaries and isolate shared integration-file changes in a separate commit.
+
+Push the branch and report the commit SHA, migrations, checks run, economic assumptions, and integration instructions. Do not merge it yourself.
+
+
+PROMPT 4 — QUESTS, CHALLENGES, AND BACKEND
+------------------------------------------
+
+Begin only after codex/foundation-ui has been reviewed and merged.
+
+You own SideQuest's quest, challenge, spawning, verification-orchestration, and related backend systems.
+
+Update main, then create branch: codex/quests-challenges
+
+Read these files completely before coding:
+- agents/README.md
+- agents/SHARED_CONTRACT.md
+- agents/04_QUESTS_CHALLENGES.md
+- agents/INIT_PROMPTS.txt
+- everything in design/
+
+Implement the complete task in agents/04_QUESTS_CHALLENGES.md. Deliver the quest lifecycle, challenges, safe deterministic spawning, GPS/photo/time verification ports, mobile screens, backend APIs, seeded CMU/Pittsburgh demo content, and tests.
+
+Use shared ports for location, economy, and events; do not copy those systems into your feature.
+
+Stay within your ownership boundaries and isolate shared integration-file changes in a separate commit.
+
+Push the branch and report the commit SHA, migrations, checks run, demo instructions, and remaining integration wiring. Do not merge it yourself.
+
+
+BRANCH SETUP REFERENCE
+----------------------
+
+Each coder should start from the appropriate updated base:
+
+git switch main
+git pull --ff-only
+git switch -c <branch-name>
+

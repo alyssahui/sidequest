@@ -79,6 +79,31 @@ describe("foundation API", () => {
     expect(accepted.json().status).toBe("ACCEPTED");
   });
 
+  it("lets an issuer recall a pending challenge and restores escrow", async () => {
+    const app = buildApp();
+    apps.push(app);
+    const sent = await app.inject({
+      method: "POST",
+      url: "/v1/challenges/custom",
+      headers: { "idempotency-key": "recall-one" },
+      payload: {
+        recipientUserId: "user-ben",
+        partyId: "party-demo",
+        task: "Count three campus trees",
+        deadline: "2099-09-12T18:00:00.000Z",
+        stakeCoins: 25,
+      },
+    });
+    const recalled = await app.inject({
+      method: "POST",
+      url: `/v1/challenges/${sent.json().id}/cancel`,
+      headers: { "idempotency-key": "recall-two" },
+      payload: { expectedVersion: sent.json().version },
+    });
+    expect(recalled.statusCode).toBe(200);
+    expect(recalled.json()).toMatchObject({ status: "DECLINED" });
+  });
+
   it("seeds live markets and can add a labeled synthetic crowd", async () => {
     const app = buildApp();
     apps.push(app);

@@ -6,7 +6,7 @@
  * never required to reach it.
  */
 
-export type LocationProviderKind = "EXPO" | "SIMULATED";
+export type LocationProviderKind = "BROWSER" | "EXPO" | "SIMULATED";
 
 export type LocationFeatureConfig = {
   apiUrl: string;
@@ -63,7 +63,12 @@ export function readLocationConfig(
     // defaulting to Expo would break CI and emulators without a mock location.
     // So: honour an explicit choice, otherwise use the real provider and let
     // the runtime probe fall back if the native module is missing.
-    providerKind: requested === "SIMULATED" ? "SIMULATED" : "EXPO",
+    providerKind:
+      requested === "SIMULATED"
+        ? "SIMULATED"
+        : typeof window !== "undefined"
+          ? "BROWSER"
+          : "EXPO",
     simulatedRouteId:
       env("EXPO_PUBLIC_LOCATION_ROUTE") ?? "route-craig-street-bakery",
     simulatorTickMs: 1_000,

@@ -2,10 +2,15 @@ import type { LocationProvider } from "@sidequest/location";
 
 import type { LocationFeatureConfig, LocationProviderKind } from "../config";
 import { createSimulatedProvider } from "./simulatedLocationProvider";
+import { BrowserLocationProvider } from "./browserLocationProvider";
 
 export type ProviderDecision = {
   kind: LocationProviderKind;
-  reason: "CONFIGURED_SIMULATED" | "CONFIGURED_EXPO" | "NATIVE_MODULE_MISSING";
+  reason:
+    | "CONFIGURED_SIMULATED"
+    | "CONFIGURED_EXPO"
+    | "CONFIGURED_BROWSER"
+    | "NATIVE_MODULE_MISSING";
 };
 
 /**
@@ -18,6 +23,9 @@ export function chooseProvider(
 ): ProviderDecision {
   if (config.providerKind === "SIMULATED") {
     return { kind: "SIMULATED", reason: "CONFIGURED_SIMULATED" };
+  }
+  if (config.providerKind === "BROWSER") {
+    return { kind: "BROWSER", reason: "CONFIGURED_BROWSER" };
   }
   // Falling back rather than failing is what keeps the app openable on a web
   // preview, in a bare emulator, and in CI.
@@ -49,6 +57,20 @@ export async function selectLocationProvider(
         secondsPerTick: config.simulatorSecondsPerTick,
       }),
       decision: chooseProvider(config, true),
+    };
+  }
+  if (config.providerKind === "BROWSER") {
+    const provider = new BrowserLocationProvider();
+    const availability = await provider.getAvailability();
+    if (availability.permission !== "UNAVAILABLE") {
+      return { provider, decision: chooseProvider(config, true) };
+    }
+    return {
+      provider: createSimulatedProvider(config.simulatedRouteId, {
+        tickMs: config.simulatorTickMs,
+        secondsPerTick: config.simulatorSecondsPerTick,
+      }),
+      decision: { kind: "SIMULATED", reason: "NATIVE_MODULE_MISSING" },
     };
   }
 

@@ -99,6 +99,19 @@ export const challengeRoutes: FastifyPluginAsync<
       return fail(reply, e);
     }
   });
+  app.post("/challenges/:id/cancel", async (request, reply) => {
+    try {
+      const body = request.body as { expectedVersion: number };
+      return await service.cancel({
+        challengeId: (request.params as { id: string }).id,
+        issuerUserId: request.principal.userId,
+        expectedVersion: body.expectedVersion,
+        idempotencyKey: idempotency(request.headers),
+      });
+    } catch (error) {
+      return fail(reply, error);
+    }
+  });
   app.post("/challenges/:id/progress", async (request, reply) => {
     try {
       const body = request.body as {

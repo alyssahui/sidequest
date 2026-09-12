@@ -284,8 +284,9 @@ export function LocationMapScreen() {
 
         {decision?.reason === "NATIVE_MODULE_MISSING" ? (
           <Text style={styles.footnote}>
-            Running the deterministic location simulator: this runtime has no
-            native location module. A development build uses real GPS.
+            Running the deterministic location simulator: browser location is
+            unavailable here. Use HTTPS (or localhost) and enable location to
+            switch to your real position.
           </Text>
         ) : null}
       </View>

@@ -67,6 +67,34 @@ describe("consent-based challenges", () => {
     expect(declined.status).toBe("DECLINED");
     expect(f.balances.get("zuri")).toBe(500);
   });
+  it("lets only the issuer recall an unanswered challenge and refunds once", async () => {
+    const f = fixture();
+    const c = await issue(f);
+    await expect(
+      f.challenges.cancel({
+        challengeId: c.id,
+        issuerUserId: "ben",
+        expectedVersion: 1,
+        idempotencyKey: "nope",
+      }),
+    ).rejects.toMatchObject({ code: "NOT_AUTHORIZED" });
+    const cancelled = await f.challenges.cancel({
+      challengeId: c.id,
+      issuerUserId: "zuri",
+      expectedVersion: 1,
+      idempotencyKey: "cancel",
+    });
+    expect(cancelled.status).toBe("DECLINED");
+    expect(f.balances.get("zuri")).toBe(500);
+    await expect(
+      f.challenges.cancel({
+        challengeId: c.id,
+        issuerUserId: "zuri",
+        expectedVersion: 2,
+        idempotencyKey: "again",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_TRANSITION" });
+  });
   it("refunds a timed-out pending challenge", async () => {
     const f = fixture();
     const c = await issue(f);

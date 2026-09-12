@@ -81,8 +81,29 @@ export function QuestsScreen() {
   useEffect(() => {
     setSelectedId(null);
     void refresh();
-    const timer = setInterval(() => void refresh(), 3_000);
-    return () => clearInterval(timer);
+    // Demo-only notification placeholder. Real PWA push belongs in a service
+    // worker `push` handler; polling must never continue in a hidden tab.
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const reconcile = () => {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState !== "visible"
+      ) {
+        if (timer) clearInterval(timer);
+        timer = null;
+        return;
+      }
+      void refresh();
+      if (!timer) timer = setInterval(() => void refresh(), 3_000);
+    };
+    reconcile();
+    if (typeof document !== "undefined")
+      document.addEventListener("visibilitychange", reconcile);
+    return () => {
+      if (timer) clearInterval(timer);
+      if (typeof document !== "undefined")
+        document.removeEventListener("visibilitychange", reconcile);
+    };
   }, [refresh]);
 
   function close() {
@@ -119,6 +140,17 @@ export function QuestsScreen() {
       method: "POST",
       headers: { "idempotency-key": `respond-${user.id}-${Date.now()}` },
       body: JSON.stringify({ accept, expectedVersion: selected.serverVersion }),
+    });
+    close();
+    await refresh();
+  }
+
+  async function cancel() {
+    if (!selected?.serverVersion) return;
+    await request(`/v1/challenges/${selected.id}/cancel`, {
+      method: "POST",
+      headers: { "idempotency-key": `cancel-${user.id}-${Date.now()}` },
+      body: JSON.stringify({ expectedVersion: selected.serverVersion }),
     });
     close();
     await refresh();
@@ -216,6 +248,7 @@ export function QuestsScreen() {
           balance={balance}
           onAccept={() => void respond(true)}
           onClose={close}
+          onCancel={() => void cancel()}
           onComplete={() => void resolve(true)}
           onDecline={() => void respond(false)}
           onFail={() => void resolve(false)}

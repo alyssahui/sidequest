@@ -246,6 +246,48 @@ export class ChallengeService {
       },
     );
   }
+  /** The issuer may withdraw an unanswered invitation and reclaim escrow. */
+  async cancel(input: {
+    challengeId: string;
+    issuerUserId: string;
+    expectedVersion: number;
+    idempotencyKey: string;
+  }): Promise<Challenge> {
+    return this.once(
+      "cancel",
+      input.issuerUserId,
+      input.idempotencyKey,
+      async () => {
+        const challenge = await this.get(input.challengeId);
+        if (challenge.issuerUserId !== input.issuerUserId)
+          throw new QuestError("NOT_AUTHORIZED");
+        if (challenge.version !== input.expectedVersion)
+          throw new QuestError("VERSION_CONFLICT");
+        if (challenge.status !== "PENDING")
+          throw new QuestError("INVALID_TRANSITION");
+        const oldVersion = challenge.version;
+        challenge.status = "DECLINED";
+        challenge.lastNotice =
+          "Challenge recalled—the full barter was returned.";
+        challenge.resolvedAt = this.d.clock.now().toISOString();
+        challenge.version++;
+        await this.d.economy.apply({
+          operationId: `challenge-cancel-refund:${challenge.id}`,
+          userId: challenge.issuerUserId,
+          amount: challenge.stakeCoins,
+          reason: "REFUND",
+          relatedEntityId: challenge.id,
+        });
+        await this.d.challenges.save(challenge, oldVersion);
+        await this.publish(
+          "challenge.cancelled",
+          challenge,
+          input.idempotencyKey,
+        );
+        return challenge;
+      },
+    );
+  }
   async consumeQuestOutcome(input: {
     challengeId: string;
     questStatus: "VERIFIED" | "FAILED" | "EXPIRED";

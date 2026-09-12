@@ -7,6 +7,7 @@ import { colors, radii, spacing } from "@sidequest/ui/theme";
 
 import type { LocationFeatureConfig } from "../config";
 import { FallbackMapSurface } from "./FallbackMapSurface";
+import { shouldUseFallbackMap } from "./fallbackPolicy";
 import {
   formatDistance,
   markerStyleFor,
@@ -98,9 +99,21 @@ export function MapSurface({
   useEffect(() => {
     let cancelled = false;
     let map: MapLibreMap | null = null;
+    let loadTimer: ReturnType<typeof setTimeout> | null = null;
+    let errorCount = 0;
 
     void (async () => {
       try {
+        if (
+          shouldUseFallbackMap({
+            loaded: false,
+            errorCount,
+            tileUrl: config.mapTileUrl,
+          })
+        ) {
+          setFailed(true);
+          return;
+        }
         // Imported dynamically so the ~200KB library is a separate chunk and a
         // failure to load degrades to the fallback rather than breaking boot.
         const maplibre = await import("maplibre-gl");
@@ -157,14 +170,29 @@ export function MapSurface({
 
         map.on("load", () => {
           if (cancelled) return;
+          if (loadTimer) clearTimeout(loadTimer);
           setReady(true);
           sync();
         });
         map.on("move", sync);
         map.on("resize", sync);
         map.on("error", () => {
-          // A tile failure is not fatal — the camera and markers still work.
+          errorCount += 1;
+          if (
+            shouldUseFallbackMap({
+              loaded: false,
+              errorCount,
+              tileUrl: config.mapTileUrl,
+            })
+          ) {
+            setFailed(true);
+          }
         });
+        // CSP blocks and broken tile hosts can otherwise leave MapLibre in its
+        // initial state forever without emitting a useful JS exception.
+        loadTimer = setTimeout(() => {
+          if (!cancelled) setFailed(true);
+        }, 10_000);
       } catch {
         if (!cancelled) setFailed(true);
       }
@@ -172,6 +200,7 @@ export function MapSurface({
 
     return () => {
       cancelled = true;
+      if (loadTimer) clearTimeout(loadTimer);
       mapRef.current = null;
       map?.remove();
     };

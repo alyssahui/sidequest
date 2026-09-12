@@ -11,6 +11,7 @@ type Props = {
   onClose: () => void;
   onAccept: () => void;
   onDecline: () => void;
+  onCancel: () => void;
   onComplete: () => void;
   onFail: () => void;
 };
@@ -21,6 +22,7 @@ export function QuestDetailOverlay({
   onClose,
   onAccept,
   onDecline,
+  onCancel,
   onComplete,
   onFail,
 }: Props) {
@@ -103,6 +105,20 @@ export function QuestDetailOverlay({
                 style={styles.secondary}
               >
                 <Text style={styles.secondaryText}>DECLINE</Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {quest.kind === "CHALLENGE" &&
+          quest.direction === "OUTGOING" &&
+          quest.status === "PENDING" ? (
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={onCancel}
+                style={styles.secondary}
+              >
+                <Text style={styles.secondaryText}>RECALL CHALLENGE</Text>
               </Pressable>
             </View>
           ) : null}

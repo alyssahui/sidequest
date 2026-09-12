@@ -28,7 +28,9 @@ import {
   isOnScreen,
   project,
 } from "../src/features/location/map/projection";
+import { shouldUseFallbackMap } from "../src/features/location/map/fallbackPolicy";
 import { chooseProvider } from "../src/features/location/providers";
+import { BrowserLocationProvider } from "../src/features/location/providers/browserLocationProvider";
 import { createSimulatedProvider } from "../src/features/location/providers/simulatedLocationProvider";
 
 /* ------------------------------------------------------------------ */
@@ -79,6 +81,28 @@ describe("chooseProvider", () => {
     });
   });
 
+  it("keeps the browser permission probe separate from the click-triggered request", () => {
+    expect(chooseProvider({ providerKind: "BROWSER" }, true)).toEqual({
+      kind: "BROWSER",
+      reason: "CONFIGURED_BROWSER",
+    });
+  });
+
+  it("does not request browser location while checking a prompt permission", async () => {
+    const getCurrentPosition = vi.fn();
+    vi.stubGlobal("window", { isSecureContext: true });
+    vi.stubGlobal("navigator", {
+      geolocation: { getCurrentPosition },
+      permissions: { query: vi.fn().mockResolvedValue({ state: "prompt" }) },
+    });
+    const provider = new BrowserLocationProvider();
+    await expect(provider.getAvailability()).resolves.toMatchObject({
+      permission: "NOT_REQUESTED",
+    });
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it("falls back to the simulator rather than failing", () => {
     expect(chooseProvider({ providerKind: "EXPO" }, false)).toEqual({
       kind: "SIMULATED",
@@ -90,6 +114,24 @@ describe("chooseProvider", () => {
     expect(chooseProvider({ providerKind: "SIMULATED" }, true).kind).toBe(
       "SIMULATED",
     );
+  });
+});
+
+describe("web map fallback policy", () => {
+  it("falls back when a tile/CSP error happens before MapLibre loads", () => {
+    expect(
+      shouldUseFallbackMap({
+        loaded: false,
+        errorCount: 1,
+        tileUrl: "https://tiles.example/{z}/{x}/{y}.png",
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects a missing or malformed tile template before rendering a blank map", () => {
+    expect(
+      shouldUseFallbackMap({ loaded: false, errorCount: 0, tileUrl: "" }),
+    ).toBe(true);
   });
 });
 

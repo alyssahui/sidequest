@@ -130,23 +130,35 @@ export function FallbackMapSurface({
             key={marker.id}
             onPress={() => onSelectMarker(marker.id)}
             style={[
-              styles.marker,
+              styles.hitArea,
               {
-                backgroundColor: style.background,
-                borderColor: style.border,
                 height: style.size,
                 width: style.size,
                 left: point.x - style.size / 2,
                 top: point.y - style.size / 2,
               },
-              selected && styles.markerSelected,
-              // Pulsing is the "something is happening" signal, so it is the
-              // first thing dropped when reduced motion is on.
-              style.pulse && !reduceMotion && styles.markerPulse,
               !onScreen && styles.markerOffscreen,
             ]}
           >
-            <Text style={styles.markerGlyph}>{style.glyph}</Text>
+            {/* The drawn pin is smaller than the pressable around it, so the
+                map stays readable without dropping below a 44pt touch target. */}
+            <View
+              style={[
+                styles.pin,
+                {
+                  backgroundColor: style.background,
+                  borderColor: style.border,
+                  height: style.visualSize,
+                  width: style.visualSize,
+                },
+                selected && styles.pinSelected,
+                // Pulsing is the "something is happening" signal, so it is the
+                // first thing dropped when reduced motion is on.
+                style.pulse && !reduceMotion && styles.markerPulse,
+              ]}
+            >
+              <Text style={{ fontSize: style.glyphSize }}>{style.glyph}</Text>
+            </View>
             {!onScreen ? <Text style={styles.offscreenArrow}>▸</Text> : null}
           </Pressable>
         );
@@ -157,7 +169,7 @@ export function FallbackMapSurface({
           accessibilityLabel="Your position"
           style={[
             styles.player,
-            { left: playerPoint.x - 29, top: playerPoint.y - 29 },
+            { left: playerPoint.x - 22, top: playerPoint.y - 22 },
           ]}
         >
           <Text style={styles.playerText}>YOU</Text>
@@ -228,14 +240,18 @@ const styles = StyleSheet.create({
   roadOne: { left: -60, top: "22%", transform: [{ rotate: "12deg" }] },
   roadTwo: { left: -80, top: "54%", transform: [{ rotate: "-18deg" }] },
   roadThree: { left: -40, top: "78%", transform: [{ rotate: "6deg" }] },
-  marker: {
+  hitArea: {
     alignItems: "center",
-    borderRadius: radii.pill,
-    borderWidth: 3,
     justifyContent: "center",
     position: "absolute",
   },
-  markerSelected: {
+  pin: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    justifyContent: "center",
+  },
+  pinSelected: {
     borderColor: colors.inkInverse,
     borderWidth: 4,
   },
@@ -245,7 +261,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   markerOffscreen: { opacity: 0.75 },
-  markerGlyph: { fontSize: 22 },
   offscreenArrow: {
     color: colors.ink,
     fontSize: 10,
@@ -259,12 +274,12 @@ const styles = StyleSheet.create({
     borderColor: colors.inkInverse,
     borderRadius: radii.pill,
     borderWidth: 3,
-    height: 58,
+    height: 44,
     justifyContent: "center",
     position: "absolute",
-    width: 58,
+    width: 44,
   },
-  playerText: { color: colors.ink, fontSize: 11, fontWeight: "900" },
+  playerText: { color: colors.ink, fontSize: 9, fontWeight: "900" },
   presenceBadge: {
     backgroundColor: colors.success,
     borderRadius: radii.pill,

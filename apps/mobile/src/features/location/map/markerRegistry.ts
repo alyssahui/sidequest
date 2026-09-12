@@ -24,8 +24,15 @@ export type MarkerStyle = {
   label: string;
   background: string;
   border: string;
-  /** Larger markers read as more important at a glance. */
+  /**
+   * Tap area. Never below 44, the platform minimum touch target, even though
+   * the drawn pin is smaller — the pressable is transparent padding around it.
+   */
   size: number;
+  /** Diameter of the drawn pin. Larger reads as more important at a glance. */
+  visualSize: number;
+  /** Font size for the glyph inside the pin. */
+  glyphSize: number;
   /** Whether the marker pulses to signal something new or live. */
   pulse: boolean;
   /** Screen-reader description prefix. */
@@ -39,6 +46,8 @@ export const markerStyles: Record<MarkerKind, MarkerStyle> = {
     background: colors.surfaceStrong,
     border: colors.brand,
     size: 52,
+    visualSize: 40,
+    glyphSize: 18,
     pulse: true,
     accessibilityPrefix: "Side quest spawned",
   },
@@ -48,6 +57,8 @@ export const markerStyles: Record<MarkerKind, MarkerStyle> = {
     background: colors.brand,
     border: colors.inkInverse,
     size: 58,
+    visualSize: 44,
+    glyphSize: 20,
     pulse: true,
     accessibilityPrefix: "Multiplayer quest",
   },
@@ -57,6 +68,8 @@ export const markerStyles: Record<MarkerKind, MarkerStyle> = {
     background: colors.brandDeep,
     border: colors.warning,
     size: 64,
+    visualSize: 48,
+    glyphSize: 22,
     pulse: false,
     accessibilityPrefix: "Boss raid",
   },
@@ -66,6 +79,8 @@ export const markerStyles: Record<MarkerKind, MarkerStyle> = {
     background: colors.warning,
     border: colors.brandDeep,
     size: 52,
+    visualSize: 40,
+    glyphSize: 18,
     pulse: true,
     accessibilityPrefix: "Limited time event",
   },
@@ -77,6 +92,8 @@ export const markerStyles: Record<MarkerKind, MarkerStyle> = {
     background: colors.success,
     border: colors.ink,
     size: 44,
+    visualSize: 34,
+    glyphSize: 16,
     pulse: false,
     accessibilityPrefix: "Party member nearby",
   },

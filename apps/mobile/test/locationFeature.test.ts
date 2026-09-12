@@ -400,8 +400,11 @@ describe("marker registry", () => {
     for (const kind of markerKinds) {
       const style = markerStyleFor(kind);
       expect(style.accessibilityPrefix.length).toBeGreaterThan(0);
-      // 44x44 is the platform minimum touch target.
+      // 44x44 is the platform minimum touch target. The drawn pin is smaller
+      // so the map stays readable, with the pressable as transparent padding.
       expect(style.size).toBeGreaterThanOrEqual(44);
+      expect(style.visualSize).toBeLessThan(style.size);
+      expect(style.glyphSize).toBeLessThan(style.visualSize);
     }
   });
 
@@ -463,6 +466,20 @@ describe("demo quest markers", () => {
   it("is deterministic relative to the supplied start time", () => {
     const start = Date.parse("2026-09-11T18:00:00.000Z");
     expect(buildDemoQuestMarkers(start)).toEqual(buildDemoQuestMarkers(start));
+  });
+
+  it("spawns the quests around whatever origin it is given", () => {
+    const start = Date.parse("2026-09-11T18:00:00.000Z");
+    // Somewhere nowhere near the default: the demo has to work anywhere.
+    const tokyo = { latitude: 35.6762, longitude: 139.6503 };
+
+    for (const marker of buildDemoQuestMarkers(start, tokyo)) {
+      const away = distanceMeters(tokyo, marker.coordinates);
+      expect(away).toBeGreaterThan(100);
+      expect(away).toBeLessThan(1_000);
+      // The GPS requirement must follow the marker, not stay behind.
+      expect(marker.requirement.target).toEqual(marker.coordinates);
+    }
   });
 });
 

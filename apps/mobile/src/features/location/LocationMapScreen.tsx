@@ -7,7 +7,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import type { GpsRequirement } from "@sidequest/contracts/location";
+import type {
+  Coordinates,
+  GpsRequirement,
+} from "@sidequest/contracts/location";
 import { distanceMeters, type LocationProvider } from "@sidequest/location";
 import { HudCard } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
@@ -55,9 +58,17 @@ export function LocationMapScreen() {
   // stable for the length of the demo rather than resetting on every render.
   const demoStartedAt = useRef(Date.now()).current;
 
+  // Where the demo quests spawn. Anchored to the player's first real fix, so
+  // the quests appear around wherever they actually are and the distances mean
+  // something; before that it falls back to the scripted route's start.
+  const [questOrigin, setQuestOrigin] = useState<Coordinates | null>(null);
+
   const markers = useMemo(
-    () => buildDemoQuestMarkers(demoStartedAt),
-    [demoStartedAt],
+    () =>
+      questOrigin
+        ? buildDemoQuestMarkers(demoStartedAt, questOrigin)
+        : buildDemoQuestMarkers(demoStartedAt),
+    [demoStartedAt, questOrigin],
   );
 
   const [provider, setProvider] = useState<LocationProvider | null>(null);
@@ -124,6 +135,12 @@ export function LocationMapScreen() {
     // Before the first fix the demo player stands at the route origin, so the
     // map is populated rather than empty.
     (decision?.kind === "SIMULATED" ? demoPlayerStart : null);
+
+  useEffect(() => {
+    if (questOrigin) return;
+    const first = device.sample?.coordinates ?? session.sample?.coordinates;
+    if (first) setQuestOrigin(first);
+  }, [device.sample, questOrigin, session.sample]);
 
   const selectedMarker = useMemo(
     () => markers.find((marker) => marker.id === selectedMarkerId) ?? null,

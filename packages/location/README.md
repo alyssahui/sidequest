@@ -199,6 +199,15 @@ Rate limit: a burst of 30 readings per user, refilling at 30/minute. A token
 bucket rather than a fixed window, so a phone flushing queued fixes after a
 tunnel is absorbed rather than rejected.
 
+### Demo quests spawn around the player
+
+`buildDemoQuestMarkers(now, origin)` places its quests by bearing and distance
+from an origin, and the map anchors that origin to the player's first real fix.
+Hardcoded coordinates would put the quests in Pittsburgh no matter where the
+player is, which makes every distance meaningless and pushes the player marker
+off the map. The quests branch replaces this wholesale; the relative placement
+is what makes the demo work anywhere in the meantime.
+
 ## For the quest agent
 
 Quest verification consumes `GpsEvidenceService` **in process**. Do not call the
@@ -283,12 +292,17 @@ forces the simulator.
 
 ### Map
 
-On **web** the map is real: MapLibre GL JS over CARTO's dark raster basemap
-(OpenStreetMap data). No native module, no development build, and no access
-token, so it satisfies the no-credentials rule while showing actual streets.
-Override the tiles with `EXPO_PUBLIC_MAP_TILE_URL` and
-`EXPO_PUBLIC_MAP_ATTRIBUTION`; attribution is required by the providers' terms
-and is rendered by the map's own control.
+On **web** the map is real: MapLibre GL JS over OpenStreetMap raster tiles. No
+native module, no development build, and no access token, so it satisfies the
+no-credentials rule while showing actual streets. OSM ships a light basemap, so
+the tiles are inverted in CSS to match the dark HUD — set
+`EXPO_PUBLIC_MAP_DARK=false` to keep them light. Override the source with
+`EXPO_PUBLIC_MAP_TILE_URL` and `EXPO_PUBLIC_MAP_ATTRIBUTION`; attribution is
+required by the providers' terms and is rendered by the map's own control.
+
+CARTO's dark basemap would suit the palette better but now stamps "API KEY
+REQUIRED" across every unkeyed tile, so it is opt-in via those variables rather
+than the default. Respect the OSM tile usage policy for anything beyond a demo.
 
 Markers are not MapLibre markers — they are the same React Native views the
 fallback uses, positioned from `map.project()` and repositioned on each camera

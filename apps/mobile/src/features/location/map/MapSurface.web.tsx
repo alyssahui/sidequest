@@ -126,6 +126,17 @@ export function MapSurface({
 
         mapRef.current = map;
 
+        if (config.mapDarkenTiles) {
+          // Applied to the canvas alone. The markers are sibling DOM nodes, so
+          // they keep their real colours; only the basemap is inverted.
+          const canvas =
+            container.querySelector<HTMLElement>(".maplibregl-canvas");
+          if (canvas) {
+            canvas.style.filter =
+              "invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.92) saturate(0.7)";
+          }
+        }
+
         const sync = () => {
           if (cancelled) return;
           setPoints(projectAll(map, playerPosition, markers));
@@ -153,7 +164,7 @@ export function MapSurface({
     };
     // Built once. Camera and marker updates are handled by the effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.mapAttribution, config.mapTileUrl]);
+  }, [config.mapAttribution, config.mapDarkenTiles, config.mapTileUrl]);
 
   // Frame everything the first time there is something to frame, then follow
   // the player rather than yanking the camera back on every fix.
@@ -226,19 +237,31 @@ export function MapSurface({
             key={marker.id}
             onPress={() => onSelectMarker(marker.id)}
             style={[
-              styles.marker,
+              styles.hitArea,
               {
-                backgroundColor: style.background,
-                borderColor: style.border,
                 height: style.size,
                 width: style.size,
                 left: point.x - style.size / 2,
                 top: point.y - style.size / 2,
               },
-              selected && styles.markerSelected,
             ]}
           >
-            <Text style={styles.markerGlyph}>{style.glyph}</Text>
+            {/* The drawn pin is smaller than the pressable around it, so the
+                map stays readable without dropping below a 44pt touch target. */}
+            <View
+              style={[
+                styles.pin,
+                {
+                  backgroundColor: style.background,
+                  borderColor: style.border,
+                  height: style.visualSize,
+                  width: style.visualSize,
+                },
+                selected && styles.pinSelected,
+              ]}
+            >
+              <Text style={{ fontSize: style.glyphSize }}>{style.glyph}</Text>
+            </View>
           </Pressable>
         );
       })}
@@ -249,7 +272,7 @@ export function MapSurface({
           pointerEvents="none"
           style={[
             styles.player,
-            { left: playerPoint.x - 29, top: playerPoint.y - 29 },
+            { left: playerPoint.x - 22, top: playerPoint.y - 22 },
           ]}
         >
           <Text style={styles.playerText}>YOU</Text>
@@ -319,27 +342,30 @@ const styles = StyleSheet.create({
     top: 0,
   },
   loadingText: { color: colors.surface, fontWeight: "700" },
-  marker: {
+  hitArea: {
     alignItems: "center",
-    borderRadius: radii.pill,
-    borderWidth: 3,
     justifyContent: "center",
     position: "absolute",
   },
-  markerSelected: { borderColor: colors.inkInverse, borderWidth: 4 },
-  markerGlyph: { fontSize: 22 },
+  pin: {
+    alignItems: "center",
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    justifyContent: "center",
+  },
+  pinSelected: { borderColor: colors.inkInverse, borderWidth: 4 },
   player: {
     alignItems: "center",
     backgroundColor: colors.brand,
     borderColor: colors.inkInverse,
     borderRadius: radii.pill,
     borderWidth: 3,
-    height: 58,
+    height: 44,
     justifyContent: "center",
     position: "absolute",
-    width: 58,
+    width: 44,
   },
-  playerText: { color: colors.ink, fontSize: 11, fontWeight: "900" },
+  playerText: { color: colors.ink, fontSize: 9, fontWeight: "900" },
   presenceBadge: {
     backgroundColor: colors.success,
     borderRadius: radii.pill,

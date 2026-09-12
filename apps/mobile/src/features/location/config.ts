@@ -22,6 +22,8 @@ export type LocationFeatureConfig = {
   mapTileUrl: string;
   /** Attribution text. Required by the tile providers' terms. */
   mapAttribution: string;
+  /** Invert the raster tiles so a light basemap matches the dark HUD. */
+  mapDarkenTiles: boolean;
   /** Cadence for foreground watching, in milliseconds. */
   watchIntervalMs: number;
   watchDistanceIntervalMeters: number;
@@ -68,15 +70,20 @@ export function readLocationConfig(
     // 15x speed: the ~11 minute demo walk finishes in about 45 seconds.
     simulatorSecondsPerTick: 15,
     mapboxToken,
-    // CARTO's dark basemap over OpenStreetMap data: free, no access token, and
-    // it suits the HUD palette better than a light street map. Override to
-    // point at any other raster tile service.
+    // OpenStreetMap's own tiles: genuinely free and unkeyed. CARTO's dark
+    // basemap would suit the palette better but now stamps "API KEY REQUIRED"
+    // across every unkeyed tile, so it is opt-in via this variable rather than
+    // the default. Respect the OSM tile usage policy for anything beyond a
+    // demo, and keep the attribution.
     mapTileUrl:
       env("EXPO_PUBLIC_MAP_TILE_URL") ??
-      "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     mapAttribution:
       env("EXPO_PUBLIC_MAP_ATTRIBUTION") ??
-      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CARTO</a>',
+      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    // OSM ships a light basemap; the app is dark. Inverting the tiles is the
+    // standard way to get a dark street map without a paid style.
+    mapDarkenTiles: env("EXPO_PUBLIC_MAP_DARK") !== "false",
     watchIntervalMs: 5_000,
     watchDistanceIntervalMeters: 10,
     ...overrides,

@@ -1,1 +1,1 @@
-export { QuestsScreen as default } from "../../src/features/shell/QuestsScreen";
+export { QuestsScreen as default } from "../../src/features/quests/QuestsScreen";

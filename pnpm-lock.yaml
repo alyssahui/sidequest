@@ -228,6 +228,9 @@ importers:
       "@sidequest/location":
         specifier: workspace:*
         version: link:../../packages/location
+      "@sidequest/quest-core":
+        specifier: workspace:*
+        version: link:../../packages/quest-core
       fastify:
         specifier: ^5.12.4
         version: 5.12.4
@@ -321,6 +324,12 @@ importers:
   packages/contracts: {}
 
   packages/location:
+    dependencies:
+      "@sidequest/contracts":
+        specifier: workspace:*
+        version: link:../contracts
+
+  packages/quest-core:
     dependencies:
       "@sidequest/contracts":
         specifier: workspace:*

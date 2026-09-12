@@ -1,63 +1,55 @@
 import Fastify from "fastify";
-
 import type { RequestPrincipal } from "@sidequest/contracts";
-
-import {
-  CryptoIdGenerator,
-  DemoPartyMemberships,
-  InMemoryEconomy,
-  InMemoryEventBus,
-  SystemClock,
-  demoPrincipal,
-} from "./foundation/demoAdapters";
+import { demoPrincipal } from "./foundation/demoAdapters";
 import { registerLocationModule } from "./modules/location";
-
+import { challengeRoutes } from "./modules/challenges/routes";
+import { demoQuestServices } from "./modules/quests/demo";
+import { questRoutes } from "./modules/quests/routes";
 declare module "fastify" {
   interface FastifyRequest {
     principal: RequestPrincipal;
   }
 }
-
 export function buildApp() {
   const app = Fastify({ logger: process.env.NODE_ENV !== "test" });
-  const events = new InMemoryEventBus();
-  const economy = new InMemoryEconomy();
-  const memberships = new DemoPartyMemberships();
-
   app.decorateRequest("principal", {
-    // Foundation-only demo identity. Replace this getter with AuthPort validation before deployment.
     getter() {
       return demoPrincipal;
     },
   });
-
   app.get("/health", async () => ({
     ok: true,
     mode: "demo",
     service: "sidequest-api",
   }));
-
   app.get("/v1/me", async (request) => ({
     ...request.principal,
-    coins: await economy.balanceFor(request.principal.userId),
+    coins: await demoQuestServices.economy.balanceFor(request.principal.userId),
   }));
-
-  app.get("/v1/demo/feed", async () => ({ events: events.feed }));
+  app.get("/v1/demo/feed", async () => ({
+    events: demoQuestServices.events.feed,
+  }));
 
   app.get("/v1/demo/party/:partyId/membership", async (request) => {
     const { partyId } = request.params as { partyId: string };
     return {
-      isMember: await memberships.isMember(request.principal.userId, partyId),
+      isMember: await demoQuestServices.memberships.isMember(
+        request.principal.userId,
+        partyId,
+      ),
     };
   });
+
+  app.register(questRoutes, { prefix: "/v1" });
+  app.register(challengeRoutes, { prefix: "/v1" });
 
   // Location owns its own routes, storage, and retention timer. It exposes
   // `gpsEvidence` for quest verification to consume in-process.
   const location = registerLocationModule(app, {
-    events,
-    memberships,
-    clock: new SystemClock(),
-    ids: new CryptoIdGenerator(),
+    events: demoQuestServices.events,
+    memberships: demoQuestServices.memberships,
+    clock: demoQuestServices.clock,
+    ids: demoQuestServices.ids,
     startRetentionSweep: process.env.NODE_ENV !== "test",
   });
 

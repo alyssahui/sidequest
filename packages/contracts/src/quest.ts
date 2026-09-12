@@ -7,6 +7,15 @@ export type QuestStatus =
   | "FAILED"
   | "EXPIRED"
   | "DISMISSED";
+export type VerificationDecision = "VERIFIED" | "FAILED" | "PENDING_REVIEW";
+export type QuestCategory =
+  | "reconnect"
+  | "learn-teach"
+  | "mutual-aid"
+  | "community-cleanup"
+  | "accessible-exploration"
+  | "wellness"
+  | "support-local";
 export type VerificationRequirement =
   | {
       type: "GPS";
@@ -14,21 +23,38 @@ export type VerificationRequirement =
       radiusMeters: number;
       maxAccuracyMeters: number;
     }
-  | { type: "PHOTO"; prompt: string }
+  | { type: "PHOTO"; prompt: string; review: "MANUAL_OR_DEMO" }
   | { type: "TIME"; notBefore?: string; deadline: string };
+export type SpawnRules = {
+  areas: string[];
+  placeCategories: string[];
+  allowedHours?: { start: number; end: number };
+  social: "solo" | "friends" | "either";
+  minimumNearbyMembers: number;
+  cooldownHours: number;
+};
+export type SafetyMetadata = {
+  risk: "LOW" | "MODERATE";
+  minimumAge?: number;
+  abilityNotes?: string;
+  moderation: "APPROVED" | "REJECTED";
+  flags: readonly string[];
+};
 export type QuestTemplate = {
   id: string;
   title: string;
   description: string;
-  category: string;
+  category: QuestCategory;
   tags: string[];
-  risk: "low" | "medium";
-  moderation: "approved";
-  social: "solo" | "friends" | "either";
-  reward: number;
-  requirements: VerificationRequirement[];
-  area: "CMU" | "PITTSBURGH";
-  cooldownHours: number;
+  safety: SafetyMetadata;
+  spawnRules: SpawnRules;
+  defaultRequirements: VerificationRequirement[];
+  rewardRange: { min: number; max: number };
+  version: number;
+};
+export type QuestSource = {
+  type: "SPAWN" | "CHALLENGE" | "WANT_NEED";
+  sourceId?: string;
 };
 export type QuestInstance = {
   id: string;
@@ -38,45 +64,92 @@ export type QuestInstance = {
   participantIds: string[];
   title: string;
   description: string;
-  reward: number;
+  rewardCoins: number;
   requirements: VerificationRequirement[];
+  source: QuestSource;
   status: QuestStatus;
+  reasonForYou?: string;
   createdAt: string;
+  expiresAt: string;
   acceptedAt?: string;
   startedAt?: string;
-  expiresAt: string;
   resolvedAt?: string;
+  resolutionReason?: string;
   version: number;
-  reason?: string;
 };
-export type Evidence = {
-  gps?: {
-    coordinates: Coordinates;
-    accuracyMeters: number;
-    capturedAt: string;
-  };
-  photo?: { mediaRef: string };
-  submittedAt: string;
+export type GpsEvidence = {
+  coordinates: Coordinates;
+  accuracyMeters: number;
+  capturedAt: string;
+  source: "device" | "demo";
+  sessionId?: string;
+};
+export type PhotoEvidence = { mediaRef: string };
+export type EvidenceSubmission = { gps?: GpsEvidence; photo?: PhotoEvidence };
+export type VerificationCheck = {
+  type: VerificationRequirement["type"];
+  decision: VerificationDecision;
+  code: string;
 };
 export type VerificationAttempt = {
   id: string;
   questId: string;
-  evidence: Evidence;
-  checks: {
-    type: VerificationRequirement["type"];
-    passed: boolean;
-    reason: string;
-  }[];
-  decision: "VERIFIED" | "FAILED" | "PENDING_REVIEW";
+  submittedByUserId: string;
+  submittedAt: string;
+  evidence: EvidenceSubmission;
+  checks: VerificationCheck[];
+  decision: VerificationDecision;
+  reasonCode: string;
+  reviewer?: {
+    type: "DEMO" | "MANUAL";
+    reviewerId?: string;
+    reviewedAt: string;
+  };
+  providerMetadata?: Record<string, string>;
+};
+export type WantNeedItem = {
+  id: string;
+  ownerUserId: string;
+  kind: "WANT" | "NEED";
+  text: string;
+  tags: string[];
   createdAt: string;
+  updatedAt: string;
+  convertedQuestId?: string;
+  version: number;
+};
+export type QuestHistoryEntry = {
+  templateId: string;
+  status: QuestStatus;
+  occurredAt: string;
 };
 export type SpawnContext = {
   userId: string;
-  now: Date;
-  area: QuestTemplate["area"];
-  tags: string[];
-  social: "solo" | "friends" | "either";
+  now: string;
+  area: string;
+  placeCategories: string[];
+  preferenceTags: string[];
+  socialPreference: "solo" | "friends" | "either";
   nearbyMemberCount: number;
   activeCount: number;
-  completedTemplateIds: string[];
+  spawnedCount: number;
+  history: QuestHistoryEntry[];
 };
+export type QuestSuggestion = {
+  template: QuestTemplate;
+  score: number;
+  reason: string;
+};
+export type ImpactSummary = {
+  completedActions: number;
+  categories: Partial<Record<QuestCategory, number>>;
+};
+export interface GpsEvidenceService {
+  evaluate(input: {
+    evidence: GpsEvidence;
+    target: Coordinates;
+    radiusMeters: number;
+    maxAccuracyMeters: number;
+    serverNow: string;
+  }): Promise<{ accepted: boolean; code: string; distanceMeters?: number }>;
+}

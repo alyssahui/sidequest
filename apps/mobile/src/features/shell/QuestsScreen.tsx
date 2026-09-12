@@ -14,7 +14,7 @@ export function QuestsScreen() {
         <StatusPill label="CHALLENGES" />
         <StatusPill label="MY LIST" />
       </View>
-      <HudCard>
+      <HudCard accessibilityLabel="Active quest: Morning walk with the Party">
         <Text style={styles.title}>Morning walk with the Party</Text>
         <Text style={styles.meta}>12 min left · GPS verification · ◉ 45</Text>
         <Text style={styles.note}>
@@ -23,7 +23,7 @@ export function QuestsScreen() {
         </Text>
       </HudCard>
       <StatusPill label="NEARBY · 3" />
-      <HudCard>
+      <HudCard accessibilityLabel="Nearby quest: Something is happening nearby">
         <Text style={styles.title}>Something is happening nearby.</Text>
         <Text style={styles.note}>
           Matches your friends + community preferences. GPS + TIME · 30 coins.

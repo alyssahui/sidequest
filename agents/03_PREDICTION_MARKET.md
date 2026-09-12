@@ -81,4 +81,3 @@ Only after the deterministic market and tests work, you may add a disabled-by-de
 - Root/feature format, typecheck, lint, and tests pass.
 
 Finish with changed files, schema/migration summary, explicit economic invariants, commands/results, any assumptions about self-bounties, and the exact event/API wiring needed during integration.
-

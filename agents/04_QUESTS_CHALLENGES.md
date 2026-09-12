@@ -98,4 +98,3 @@ Only after deterministic spawning works, you may implement a disabled-by-default
 - Root/feature format, typecheck, lint, and tests pass.
 
 Finish with changed files, lifecycle and API summary, seed/demo instructions, commands/results, safety assumptions, and exact location/market/economy integration wiring still needed.
-

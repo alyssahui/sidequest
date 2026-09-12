@@ -87,4 +87,3 @@ Party proximity should use server-side spatial grouping plus freshness and conse
 - Root and feature format/typecheck/lint/test commands pass.
 
 Finish with changed files, contract/API examples, retention and privacy assumptions, commands/results, manual device checks, and the minimal integration wiring needed by the quest agent.
-

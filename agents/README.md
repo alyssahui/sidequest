@@ -13,21 +13,18 @@ This directory contains ready-to-paste prompts for four Codex instances. Each pr
 
 ## Required branch order
 
-Do not start all four agents from today's nearly empty repository. They would each create incompatible project scaffolding and produce a painful merge.
+The shared Expo/Fastify workspace, contracts, theme, API shell, and deterministic demo adapters now exist on `main`. All four coders should pull the same latest `main` commit before creating their branches, then they may work concurrently:
 
-1. Create a foundation branch from `main` and run `01_UI_UX_APP.md`.
-2. Review and merge the foundation commit into `main`. Confirm that the workspace installs and the mobile shell starts.
-3. Create three branches from that exact merged commit and run these in parallel:
-   - `02_LOCATION_TRACKING.md`
-   - `03_PREDICTION_MARKET.md`
-   - `04_QUESTS_CHALLENGES.md`
+1. Confirm `corepack pnpm install && corepack pnpm check` passes on `main`.
+2. Create all four feature branches from that exact commit.
+3. Run the matching prompt on each branch.
 4. Merge feature branches one at a time. Resolve composition files manually; do not accept an entire side of a conflict in shared manifests, route files, database metadata, or API registration.
 5. Run the integration checklist below on the combined branch.
 
 Suggested branch names:
 
 ```text
-codex/foundation-ui
+codex/ui-ux
 codex/location
 codex/markets
 codex/quests-challenges
@@ -36,12 +33,12 @@ codex/integration
 
 ## Ownership map
 
-| Workstream | Primary ownership | Avoid editing |
-|---|---|---|
+| Workstream           | Primary ownership                                                                                                                                                                                                       | Avoid editing                                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | UI/UX/app foundation | workspace configuration, `apps/mobile/app`, `apps/mobile/src/features/shell`, `party`, `feed`, `profile`, `packages/ui`, shared identity/party/event/economy ports in `packages/contracts`, API shell and demo adapters | domain implementations for location, markets, quests, or challenges |
-| Location | `packages/location`, `packages/contracts/src/location.ts`, `apps/mobile/src/features/location`, `apps/api/src/modules/location` | theme internals, market or quest lifecycle code |
-| Prediction market | `packages/market-core`, `packages/contracts/src/market.ts`, `apps/mobile/src/features/markets`, `apps/api/src/modules/markets`, market migrations | quest resolution and location tracking internals |
-| Quests/challenges | `packages/quest-core`, `packages/contracts/src/quest.ts`, `challenge.ts`, `apps/mobile/src/features/quests`, `challenges`, `apps/api/src/modules/quests`, `challenges`, quest migrations | market settlement, location provider internals, global theme |
+| Location             | `packages/location`, `packages/contracts/src/location.ts`, `apps/mobile/src/features/location`, `apps/api/src/modules/location`                                                                                         | theme internals, market or quest lifecycle code                     |
+| Prediction market    | `packages/market-core`, `packages/contracts/src/market.ts`, `apps/mobile/src/features/markets`, `apps/api/src/modules/markets`, market migrations                                                                       | quest resolution and location tracking internals                    |
+| Quests/challenges    | `packages/quest-core`, `packages/contracts/src/quest.ts`, `challenge.ts`, `apps/mobile/src/features/quests`, `challenges`, `apps/api/src/modules/quests`, `challenges`, quest migrations                                | market settlement, location provider internals, global theme        |
 
 Shared composition files—workspace manifests, lockfile, Expo config, route files, API server registration, database migration journal, and contract exports—are integration hotspots. Feature agents should expose a route/component/plugin from their owned module and keep edits to those hotspots minimal and isolated in a clearly labeled commit.
 

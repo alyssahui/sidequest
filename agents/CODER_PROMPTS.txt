@@ -4,7 +4,7 @@ SIDEQUEST CODER HANDOFF PROMPTS
 RUN ORDER
 ---------
 
-Run Prompt 1 first. Review and merge codex/foundation-ui into main before sending Prompts 2, 3, and 4. The final three coders should all branch from the same updated main commit and may work concurrently.
+The shared app/API foundation already exists on main. Every coder must pull the same latest main commit before branching. All four prompts may then run concurrently.
 
 
 PROMPT 1 — UI/UX AND APP FOUNDATION
@@ -12,7 +12,7 @@ PROMPT 1 — UI/UX AND APP FOUNDATION
 
 You own SideQuest's UI/UX and repository foundation.
 
-Create branch: codex/foundation-ui
+Update main, then create branch: codex/ui-ux
 
 Read these files completely before coding:
 - agents/README.md
@@ -35,8 +35,6 @@ Do not merge the branch yourself.
 PROMPT 2 — LOCATION, PROXIMITY, AND GPS VERIFICATION
 ----------------------------------------------------
 
-Begin only after codex/foundation-ui has been reviewed and merged.
-
 You own SideQuest's location, proximity, map, and GPS-verification systems.
 
 Update main, then create branch: codex/location
@@ -57,8 +55,6 @@ Push the branch and report the commit SHA, checks run, device-testing requiremen
 
 PROMPT 3 — VIRTUAL-COIN PREDICTION MARKET
 -----------------------------------------
-
-Begin only after codex/foundation-ui has been reviewed and merged.
 
 You own SideQuest's virtual-coin economy and Kalshi-style prediction system.
 
@@ -82,8 +78,6 @@ Push the branch and report the commit SHA, migrations, checks run, economic assu
 
 PROMPT 4 — QUESTS, CHALLENGES, AND BACKEND
 ------------------------------------------
-
-Begin only after codex/foundation-ui has been reviewed and merged.
 
 You own SideQuest's quest, challenge, spawning, verification-orchestration, and related backend systems.
 
@@ -113,4 +107,3 @@ Each coder should start from the appropriate updated base:
 git switch main
 git pull --ff-only
 git switch -c <branch-name>
-

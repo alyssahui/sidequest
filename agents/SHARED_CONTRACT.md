@@ -88,9 +88,14 @@ Verification uses composable requirements:
 
 ```ts
 type VerificationRequirement =
-  | { type: 'GPS'; target: Coordinates; radiusMeters: number; maxAccuracyMeters: number }
-  | { type: 'PHOTO'; prompt: string }
-  | { type: 'TIME'; notBefore?: string; deadline: string };
+  | {
+      type: "GPS";
+      target: Coordinates;
+      radiusMeters: number;
+      maxAccuracyMeters: number;
+    }
+  | { type: "PHOTO"; prompt: string }
+  | { type: "TIME"; notBefore?: string; deadline: string };
 ```
 
 The server evaluates normalized evidence and records a `VerificationAttempt`; it does not trust a client boolean such as `isVerified`.

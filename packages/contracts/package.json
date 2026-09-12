@@ -1,0 +1,15 @@
+{
+  "name": "@sidequest/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./events": "./src/events.ts",
+    "./foundation": "./src/foundation.ts",
+    "./navigation": "./src/navigation.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

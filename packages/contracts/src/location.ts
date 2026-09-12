@@ -111,8 +111,11 @@ export type LocationSession = {
 export type StartLocationSessionRequest = {
   purpose: LocationSessionPurpose;
   mode: LocationSessionMode;
-  /** Requested duration; the server clamps it to the policy maximum. */
-  durationMs: number;
+  /**
+   * Requested duration. Omit to use the player's saved default; either way the
+   * server clamps to the policy maximum for the purpose.
+   */
+  durationMs?: number;
   questInstanceId?: string;
   partyId?: string;
   idempotencyKey?: string;
@@ -225,15 +228,26 @@ export type GpsEvidenceRequest = {
 
 export type GpsEvidenceStatus = "SATISFIED" | "NOT_SATISFIED" | "NO_EVIDENCE";
 
+/** Why no usable sample existed. Distinct from a sample that simply fell short. */
+export type GpsNoEvidenceReason =
+  /** The player has not sent any reading for this quest. */
+  | "NO_SAMPLES"
+  /** Every stored reading has aged out of the retention window. */
+  | "SAMPLES_EXPIRED";
+
 export type GpsEvidenceResult = {
   status: GpsEvidenceStatus;
   questInstanceId: string;
   evaluatedAt: string;
-  /** Null only when `status` is `NO_EVIDENCE`. */
+  /**
+   * The measurements behind the verdict, including which conditions failed.
+   * Null only when `status` is `NO_EVIDENCE`.
+   */
   evaluation: ArrivalEvaluation | null;
   /** Opaque id of the sample used, for audit without storing coordinates. */
   sampleId?: string;
-  reasons: readonly LocationRejectionCode[];
+  /** Set only when `status` is `NO_EVIDENCE`. */
+  noEvidenceReason?: GpsNoEvidenceReason;
 };
 
 /**

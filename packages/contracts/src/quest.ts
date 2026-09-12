@@ -1,4 +1,4 @@
-export type Coordinates = { latitude: number; longitude: number };
+export type QuestCoordinates = { latitude: number; longitude: number };
 export type QuestStatus =
   | "SPAWNED"
   | "ACCEPTED"
@@ -19,7 +19,7 @@ export type QuestCategory =
 export type VerificationRequirement =
   | {
       type: "GPS";
-      target: Coordinates;
+      target: QuestCoordinates;
       radiusMeters: number;
       maxAccuracyMeters: number;
     }
@@ -86,7 +86,7 @@ export type QuestInstance = {
   version: number;
 };
 export type GpsEvidence = {
-  coordinates: Coordinates;
+  coordinates: QuestCoordinates;
   accuracyMeters: number;
   capturedAt: string;
   source: "device" | "demo";
@@ -152,12 +152,22 @@ export type ImpactSummary = {
   completedActions: number;
   categories: Partial<Record<QuestCategory, number>>;
 };
-export interface GpsEvidenceService {
+export interface QuestGpsEvidenceService {
   evaluate(input: {
+    /**
+     * The reading the client submitted.
+     *
+     * An implementation backed by server-stored evidence should prefer its own
+     * record and treat this as a fallback — a client can claim any position.
+     */
     evidence: GpsEvidence;
-    target: Coordinates;
+    target: QuestCoordinates;
     radiusMeters: number;
     maxAccuracyMeters: number;
     serverNow: string;
+    /** Who is claiming arrival. Optional so simple implementations can ignore it. */
+    userId?: string;
+    /** Which quest the claim is for. */
+    questInstanceId?: string;
   }): Promise<{ accepted: boolean; code: string; distanceMeters?: number }>;
 }

@@ -1,1 +1,1 @@
-export { MapScreen as default } from "../../src/features/shell/MapScreen";
+export { LocationMapScreen as default } from "../../src/features/location/LocationMapScreen";

@@ -82,7 +82,12 @@ export class ChallengeService {
           recipientUserId: input.recipientUserId,
           partyId: input.partyId,
           questTemplateId: templateId,
-          stakeCoins: assessment.suggestedStakeCoins,
+          stakeCoins:
+            Number.isSafeInteger(input.stakeCoins) &&
+            Number(input.stakeCoins) >= this.min &&
+            Number(input.stakeCoins) <= this.max
+              ? Number(input.stakeCoins)
+              : assessment.suggestedStakeCoins,
           expiresAt: input.deadline,
           idempotencyKey: `custom:${input.idempotencyKey}`,
         });

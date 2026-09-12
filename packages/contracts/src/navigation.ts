@@ -1,4 +1,4 @@
-export const rootTabs = ["map", "quests", "party", "feed", "profile"] as const;
+export const rootTabs = ["map", "quests", "party", "bet", "profile"] as const;
 
 export type RootTab = (typeof rootTabs)[number];
 
@@ -6,6 +6,6 @@ export const rootTabLabels: Record<RootTab, string> = {
   map: "MAP",
   quests: "QUESTS",
   party: "PARTY",
-  feed: "FEED",
+  bet: "BET",
   profile: "PROFILE",
 };

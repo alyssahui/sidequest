@@ -1,336 +1,259 @@
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { CoinAmount, HudCard, StatusPill } from "@sidequest/ui/components";
-import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pressable, StyleSheet, Text } from "react-native";
+
+import type { Challenge } from "@sidequest/contracts";
+import { colors, radii } from "@sidequest/ui/theme";
+
+import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import { ScreenFrame } from "../shell/ScreenFrame";
-import { ChallengeCard } from "../challenges/ChallengeCard";
-import {
-  ChallengeComposer,
-  type ComposedChallenge,
-} from "../challenges/ChallengeComposer";
-import {
-  demoActive,
-  demoChallenges,
-  demoItems,
-  demoNearby,
-  type QuestSection,
-} from "./demoData";
-import { QuestStatePanel, type QuestViewState } from "./QuestStatePanel";
-import { SpawnReveal } from "./SpawnReveal";
-import { QuestBriefing, type QuestBriefingData } from "./QuestBriefing";
-const sections: QuestSection[] = ["ACTIVE", "NEARBY", "CHALLENGES", "MY LIST"];
-type ChallengeView = Omit<ComposedChallenge, "status" | "direction"> & {
-  direction: "INCOMING" | "OUTGOING";
-  status: string;
-};
+import { AddTaskOverlay } from "./AddTaskOverlay";
+import { demoQuests, type QuestItem } from "./demoData";
+import { QuestDetailOverlay } from "./QuestDetailOverlay";
+import { QuestRow } from "./QuestRow";
+
+const person = (id: string) =>
+  DEMO_USERS.find((user) => user.id === id)?.name ?? "Party member";
+
+function toItem(challenge: Challenge, viewerId: string): QuestItem {
+  const incoming = challenge.recipientUserId === viewerId;
+  const status =
+    challenge.status === "PENDING"
+      ? "PENDING"
+      : challenge.status === "ACCEPTED"
+        ? "ACTIVE"
+        : challenge.status === "COMPLETED"
+          ? "COMPLETE"
+          : "FAILED";
+  return {
+    id: challenge.id,
+    kind: "CHALLENGE",
+    status,
+    attention: incoming && challenge.status === "PENDING",
+    direction: incoming ? "INCOMING" : "OUTGOING",
+    escrowHeld: ["PENDING", "ACCEPTED"].includes(challenge.status),
+    title: challenge.title,
+    location: "Community mission",
+    person: person(
+      incoming ? challenge.issuerUserId : challenge.recipientUserId,
+    ),
+    description:
+      `${challenge.description} ${challenge.lastNotice ?? ""}`.trim(),
+    timeLeft: challenge.status === "PENDING" ? "24 hrs" : challenge.status,
+    stake: challenge.stakeCoins,
+    serverVersion: challenge.version,
+  };
+}
+
 export function QuestsScreen() {
-  const [section, setSection] = useState<QuestSection>("ACTIVE");
-  const [state, setState] = useState<QuestViewState>("ready");
-  const [reveal, setReveal] = useState<string>();
-  const [items, setItems] = useState<
-    { id: string; kind: "WANT" | "NEED"; text: string }[]
-  >(demoItems.map((x) => ({ ...x })));
-  const [draft, setDraft] = useState("");
-  const [customActive, setCustomActive] = useState<{
-    title: string;
-    briefing: QuestBriefingData;
-  }>();
-  const [challenges, setChallenges] = useState<ChallengeView[]>(
-    demoChallenges.map((challenge) => ({ ...challenge })),
+  const { request, user } = useDemoSession();
+  const [localQuests, setLocalQuests] = useState<QuestItem[]>(demoQuests);
+  const [sharedQuests, setSharedQuests] = useState<QuestItem[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [sync, setSync] = useState("Connecting…");
+  const quests = useMemo(
+    () => [...sharedQuests, ...localQuests],
+    [localQuests, sharedQuests],
   );
-  return (
-    <ScreenFrame eyebrow="YOUR ADVENTURES · DEMO MODE" title="QUESTS">
-      <View accessibilityRole="tablist" style={styles.tabs}>
-        {sections.map((s) => (
-          <Pressable
-            accessibilityRole="tab"
-            accessibilityState={{ selected: section === s }}
-            key={s}
-            onPress={() => {
-              setSection(s);
-              setState("ready");
-            }}
-            style={[styles.tab, section === s && styles.tabActive]}
-          >
-            <Text
-              style={[styles.tabText, section === s && styles.tabTextActive]}
-            >
-              {s}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <QuestStatePanel state={state} onAction={() => setState("ready")} />
-      {state === "ready" && section === "ACTIVE" ? (
-        <Active custom={customActive} onVerify={() => setState("complete")} />
-      ) : null}
-      {state === "ready" && section === "NEARBY" ? (
-        <>
-          {reveal ? (
-            <SpawnReveal
-              title={demoNearby.find((q) => q.id === reveal)?.title ?? "Quest"}
-              reason={
-                demoNearby.find((q) => q.id === reveal)?.reason ?? "For you"
-              }
-              onAccept={() => {
-                setReveal(undefined);
-                setSection("ACTIVE");
-              }}
-              onDismiss={() => setReveal(undefined)}
-            />
-          ) : (
-            demoNearby.map((q) => (
-              <HudCard
-                accessibilityLabel={`Nearby quest: ${q.title}`}
-                key={q.id}
-              >
-                <Text style={styles.title}>{q.title}</Text>
-                <Text style={styles.meta}>{q.meta}</Text>
-                <Text style={styles.note}>{q.reason}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => setReveal(q.id)}
-                  style={styles.primary}
-                >
-                  <Text style={styles.primaryText}>REVEAL QUEST</Text>
-                </Pressable>
-              </HudCard>
-            ))
-          )}
-        </>
-      ) : null}
-      {state === "ready" && section === "CHALLENGES" ? (
-        <>
-          <ChallengeComposer
-            onSend={(challenge) =>
-              setChallenges((current) => [challenge, ...current])
-            }
-          />
-          {challenges.map((c) => (
-            <ChallengeCard
-              key={c.id}
-              {...c}
-              onAccept={() => {
-                setChallenges((current) =>
-                  current.map((challenge) =>
-                    challenge.id === c.id
-                      ? { ...challenge, status: "ACCEPTED", progress: 10 }
-                      : challenge,
-                  ),
-                );
-                setSection("ACTIVE");
-              }}
-              onDecline={() =>
-                setChallenges((current) =>
-                  current.map((challenge) =>
-                    challenge.id === c.id
-                      ? { ...challenge, status: "REJECTED", progress: 100 }
-                      : challenge,
-                  ),
-                )
-              }
-            />
-          ))}
-        </>
-      ) : null}
-      {state === "ready" && section === "MY LIST" ? (
-        <>
-          <HudCard accessibilityLabel="Add a want or need">
-            <Text style={styles.title}>Questify your list</Text>
-            <TextInput
-              accessibilityLabel="New want or need"
-              onChangeText={setDraft}
-              placeholder="Something I want or need to do"
-              placeholderTextColor={colors.muted}
-              style={styles.input}
-              value={draft}
-            />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                if (draft.trim()) {
-                  setItems((x) => [
-                    ...x,
-                    {
-                      id: `local-${x.length}`,
-                      kind: "WANT",
-                      text: draft.trim(),
-                    },
-                  ]);
-                  setDraft("");
+  const selected = quests.find((quest) => quest.id === selectedId);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [challengeResult, economy] = await Promise.all([
+        request<{ incoming: Challenge[]; outgoing: Challenge[] }>(
+          "/v1/challenges",
+        ),
+        request<{ balance: number }>("/v1/economy/me"),
+      ]);
+      setSharedQuests(
+        [...challengeResult.incoming, ...challengeResult.outgoing].map(
+          (challenge) => toItem(challenge, user.id),
+        ),
+      );
+      setBalance(economy.balance);
+      setSync("Shared with your party · refreshes every 3 seconds");
+    } catch (error) {
+      setSync(error instanceof Error ? error.message : "API unavailable");
+    }
+  }, [request, user.id]);
+
+  useEffect(() => {
+    setSelectedId(null);
+    void refresh();
+    const timer = setInterval(() => void refresh(), 3_000);
+    return () => clearInterval(timer);
+  }, [refresh]);
+
+  function close() {
+    setSelectedId(null);
+  }
+
+  async function respond(accept: boolean) {
+    if (!selected) return;
+    if (!selected.serverVersion) {
+      if (accept) {
+        if (selected.stake > balance) return;
+        setBalance((current) => current - selected.stake);
+        setLocalQuests((current) =>
+          current.map((quest) =>
+            quest.id === selected.id
+              ? {
+                  ...quest,
+                  status: "ACTIVE",
+                  attention: false,
+                  escrowHeld: true,
                 }
-              }}
-              style={styles.primary}
-            >
-              <Text style={styles.primaryText}>ADD ITEM</Text>
-            </Pressable>
-          </HudCard>
-          {items.map((item) => (
-            <HudCard key={item.id}>
-              <StatusPill label={item.kind} />
-              <Text style={styles.title}>{item.text}</Text>
-              <View style={styles.itemActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    const now = new Date();
-                    const deadline = new Date(now.getTime() + 24 * 3_600_000);
-                    setCustomActive({
-                      title: item.text,
-                      briefing: {
-                        explanation: `🚀 Your ${item.kind.toLowerCase()} just evolved into a live quest! “${item.text}” now has a clear finish line, flexible proof, and zero shame if plans change.`,
-                        objective: item.text,
-                        timeLabel: `Finish by ${deadline.toLocaleString()}`,
-                        locationLabel: "Choose a safe, appropriate location",
-                        notes: [
-                          "Generated from My List",
-                          "Edit the plan or skip without penalty",
-                        ],
-                      },
-                    });
-                    setItems((current) =>
-                      current.filter((candidate) => candidate.id !== item.id),
-                    );
-                    setSection("ACTIVE");
-                  }}
-                  style={styles.small}
-                >
-                  <Text style={styles.smallText}>TURN INTO QUEST</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityLabel={`Remove ${item.text}`}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    setItems((x) => x.filter((i) => i.id !== item.id))
-                  }
-                  style={styles.small}
-                >
-                  <Text style={styles.smallText}>REMOVE</Text>
-                </Pressable>
-              </View>
-            </HudCard>
-          ))}
-        </>
+              : quest,
+          ),
+        );
+      } else {
+        setLocalQuests((current) =>
+          current.filter((quest) => quest.id !== selected.id),
+        );
+      }
+      close();
+      return;
+    }
+    await request(`/v1/challenges/${selected.id}/respond`, {
+      method: "POST",
+      headers: { "idempotency-key": `respond-${user.id}-${Date.now()}` },
+      body: JSON.stringify({ accept, expectedVersion: selected.serverVersion }),
+    });
+    close();
+    await refresh();
+  }
+
+  function completeLocal() {
+    if (!selected) return;
+    if (selected.escrowHeld) setBalance((current) => current + selected.stake);
+    setLocalQuests((current) =>
+      current.map((quest) =>
+        quest.id === selected.id ? { ...quest, status: "COMPLETE" } : quest,
+      ),
+    );
+    close();
+  }
+
+  async function resolve(completed: boolean) {
+    if (!selected?.serverVersion) {
+      if (completed) completeLocal();
+      else failLocal();
+      return;
+    }
+    await request(`/v1/demo/challenges/${selected.id}/resolve`, {
+      method: "POST",
+      headers: { "idempotency-key": `resolve-${user.id}-${Date.now()}` },
+      body: JSON.stringify({ completed }),
+    });
+    close();
+    await refresh();
+  }
+
+  function failLocal() {
+    if (!selected) return;
+    setLocalQuests((current) =>
+      current.map((quest) =>
+        quest.id === selected.id ? { ...quest, status: "FAILED" } : quest,
+      ),
+    );
+    close();
+  }
+
+  async function create(quest: QuestItem) {
+    if (quest.kind === "CHALLENGE") {
+      const recipient = DEMO_USERS.find(
+        (candidate) => candidate.name === quest.person,
+      );
+      if (!recipient) throw new Error("Choose a demo party member");
+      await request<Challenge>("/v1/challenges/custom", {
+        method: "POST",
+        headers: { "idempotency-key": `challenge-${user.id}-${Date.now()}` },
+        body: JSON.stringify({
+          recipientUserId: recipient.id,
+          partyId: "party-demo",
+          task: quest.title,
+          locationLabel: quest.location,
+          notes: quest.description,
+          deadline: new Date(Date.now() + 24 * 3600_000).toISOString(),
+          stakeCoins: quest.stake,
+        }),
+      });
+      await refresh();
+    } else {
+      setBalance((current) => current - quest.stake);
+      setLocalQuests((current) => [quest, ...current]);
+    }
+    setAdding(false);
+  }
+
+  return (
+    <ScreenFrame
+      eyebrow="HUMAN ACTION · GROK MISSION INTELLIGENCE"
+      headerRight={
+        <Pressable
+          accessibilityLabel="Add a task or challenge a friend"
+          accessibilityRole="button"
+          onPress={() => setAdding(true)}
+          style={styles.add}
+        >
+          <Text style={styles.addText}>+</Text>
+        </Pressable>
+      }
+      title="QUESTS"
+    >
+      <Text style={styles.balance}>YOUR CREDIT · ◉ {balance}</Text>
+      <Text style={styles.sync}>{sync}</Text>
+      {quests.map((quest) => (
+        <QuestRow
+          key={quest.id}
+          onPress={() => setSelectedId(quest.id)}
+          quest={quest}
+        />
+      ))}
+      {selected ? (
+        <QuestDetailOverlay
+          balance={balance}
+          onAccept={() => void respond(true)}
+          onClose={close}
+          onComplete={() => void resolve(true)}
+          onDecline={() => void respond(false)}
+          onFail={() => void resolve(false)}
+          quest={selected}
+        />
       ) : null}
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => setState("offline")}
-        style={styles.demo}
-      >
-        <Text style={styles.demoText}>PREVIEW OFFLINE STATE</Text>
-      </Pressable>
+      {adding ? (
+        <AddTaskOverlay
+          balance={balance}
+          onClose={() => setAdding(false)}
+          onCreate={create}
+        />
+      ) : null}
     </ScreenFrame>
   );
 }
-function Active({
-  onVerify,
-  custom,
-}: {
-  onVerify: () => void;
-  custom?: { title: string; briefing: QuestBriefingData };
-}) {
-  return (
-    <HudCard
-      accessibilityLabel={`Active quest: ${custom?.title ?? demoActive.title}`}
-    >
-      <View style={styles.row}>
-        <StatusPill label="IN PROGRESS" />
-        <CoinAmount amount={demoActive.reward} />
-      </View>
-      <Text style={styles.title}>{custom?.title ?? demoActive.title}</Text>
-      <Text style={styles.meta}>
-        {demoActive.deadline} · {demoActive.participants}
-      </Text>
-      <View style={styles.steps}>
-        {demoActive.steps.map((step, i) => (
-          <Text key={step} style={styles.note}>
-            {i + 1}. {step}
-          </Text>
-        ))}
-      </View>
-      <QuestBriefing briefing={custom?.briefing ?? demoActive.briefing} />
-      <Text style={styles.privacy}>
-        GPS is checked only for this active quest. Photos require review and
-        should not contain private documents.
-      </Text>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onVerify}
-        style={styles.primary}
-      >
-        <Text style={styles.primaryText}>SIMULATE GPS + TIME</Text>
-      </Pressable>
-    </HudCard>
-  );
-}
+
 const styles = StyleSheet.create({
-  tabs: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  tab: {
+  add: {
     alignItems: "center",
-    borderColor: colors.brand,
+    backgroundColor: colors.brand,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    height: 44,
     justifyContent: "center",
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
+    width: 44,
   },
-  tabActive: { backgroundColor: colors.brand },
-  tabText: { color: colors.inkInverse, fontSize: 11, fontWeight: "900" },
-  tabTextActive: { color: colors.ink },
-  title: {
+  addText: {
     color: colors.ink,
-    fontSize: typeScale.title,
+    fontSize: 28,
     fontWeight: "900",
-    marginTop: spacing.md,
+    lineHeight: 30,
+    marginTop: -2,
   },
-  meta: { color: colors.ink, marginTop: spacing.sm },
-  note: { color: colors.muted, lineHeight: 21, marginTop: spacing.sm },
-  privacy: {
-    color: colors.brandDeep,
+  balance: {
+    color: colors.surface,
     fontSize: 12,
-    lineHeight: 18,
-    marginTop: spacing.md,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
-  row: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  steps: { marginTop: spacing.sm },
-  primary: {
-    alignItems: "center",
-    backgroundColor: colors.brandDeep,
-    borderRadius: radii.sm,
-    justifyContent: "center",
-    marginTop: spacing.md,
-    minHeight: 48,
-  },
-  primaryText: { color: colors.inkInverse, fontWeight: "900" },
-  input: {
-    borderColor: colors.outline,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    color: colors.ink,
-    marginTop: spacing.md,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-  },
-  itemActions: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  small: {
-    alignItems: "center",
-    borderColor: colors.brandDeep,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    justifyContent: "center",
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-  },
-  smallText: { color: colors.brandDeep, fontSize: 11, fontWeight: "900" },
-  demo: { alignItems: "center", justifyContent: "center", minHeight: 44 },
-  demoText: { color: colors.brand, fontSize: 11, fontWeight: "800" },
+  sync: { color: colors.brand, fontSize: 10, marginTop: -6 },
 });

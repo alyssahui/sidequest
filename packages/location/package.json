@@ -1,0 +1,22 @@
+{
+  "name": "@sidequest/location",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./policy": "./src/policy.ts",
+    "./geometry": "./src/geometry.ts",
+    "./arrival": "./src/arrival.ts",
+    "./presence": "./src/presence.ts",
+    "./session": "./src/session.ts",
+    "./simulator": "./src/simulator.ts",
+    "./provider": "./src/provider.ts"
+  },
+  "dependencies": {
+    "@sidequest/contracts": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

@@ -17,7 +17,7 @@ export function HudCard({
 
 export function CoinAmount({ amount }: { amount: number }) {
   return (
-    <Text accessibilityLabel={`${amount} coins`} style={styles.coins}>
+    <Text accessibilityLabel={`${amount} credit`} style={styles.coins}>
       ◉ {amount}
     </Text>
   );

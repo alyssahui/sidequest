@@ -86,7 +86,7 @@ export function ChallengeComposer({
           <Text style={styles.explanation}>{assessment.explanation}</Text>
           <Text style={styles.help}>
             📸 Photo + ⏱ complete within 24 hours · both players barter{" "}
-            {assessment.stake} coins
+            {assessment.stake} credit
           </Text>
         </View>
       ) : null}
@@ -137,7 +137,7 @@ function assess(task: string, location: string) {
   return {
     category,
     stake,
-    explanation: `🔥 ${category} quest detected! The ${stake}-coin barter matches the mission detail${location.trim() ? " and location commitment" : ""}.`,
+    explanation: `🔥 ${category} quest detected! The ${stake}-credit barter matches the mission detail${location.trim() ? " and location commitment" : ""}.`,
   };
 }
 const styles = StyleSheet.create({

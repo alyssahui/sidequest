@@ -1,61 +1,80 @@
-export type QuestSection = "ACTIVE" | "NEARBY" | "CHALLENGES" | "MY LIST";
-export const demoActive = {
-  title: "Make campus kinder",
-  deadline: "42 min left",
-  reward: 30,
-  participants: "You + Alyssa",
-  steps: ["Reach the CMU area", "Upload current GPS", "Finish before deadline"],
-  briefing: {
-    explanation:
-      "⚡ Campus kindness quest locked in! Three tiny cleanups become one visible win for everyone sharing the space.",
-    objective:
-      "Collect three safe pieces of litter and place them in the correct bin.",
-    timeLabel: "Finish within 42 minutes",
-    locationLabel: "CMU campus public paths",
-    notes: ["Wear gloves or use a grabber", "Skip sharp or unsafe objects"],
-  },
+export type QuestKind = "OWN" | "CHALLENGE" | "SYSTEM";
+export type QuestStatus = "PENDING" | "ACTIVE" | "COMPLETE" | "FAILED";
+export type QuestDirection = "INCOMING" | "OUTGOING" | "SELF";
+
+export type QuestItem = {
+  id: string;
+  kind: QuestKind;
+  status: QuestStatus;
+  attention: boolean;
+  direction: QuestDirection;
+  escrowHeld: boolean;
+  title: string;
+  location: string;
+  person: string;
+  description: string;
+  timeLeft: string;
+  stake: number;
+  serverVersion?: number;
 };
-export const demoNearby = [
+
+export const DEMO_QUEST_BALANCE = 420;
+
+export const demoQuests: QuestItem[] = [
   {
-    id: "cmu-teach",
-    title: "Teach a tiny thing",
-    meta: "180m · 25 coins · TIME",
-    reason: "Learning interest · one friend nearby",
+    id: "own-wean",
+    kind: "OWN",
+    status: "ACTIVE",
+    attention: false,
+    direction: "SELF",
+    escrowHeld: false,
+    title: "Scavenge in Wean 6",
+    location: "Wean 6",
+    person: "You",
+    description: "Find something you have never noticed in the hallway.",
+    timeLeft: "12 hrs 30 mins",
+    stake: 25,
   },
   {
-    id: "cmu-access",
-    title: "Explore an accessible route",
-    meta: "320m · 20 coins · GPS + TIME",
-    reason: "Accessibility interest · near campus",
+    id: "own-library",
+    kind: "OWN",
+    status: "ACTIVE",
+    attention: false,
+    direction: "SELF",
+    escrowHeld: false,
+    title: "Return library books",
+    location: "Hunt Library",
+    person: "You",
+    description: "Get the overdue stack off your desk today.",
+    timeLeft: "8 hrs 10 mins",
+    stake: 10,
   },
-];
-export const demoChallenges = [
   {
     id: "challenge-ben",
-    direction: "INCOMING",
-    person: "Ben",
-    title: "Teach a tiny thing",
-    stake: 25,
-    expires: "58 min",
+    kind: "CHALLENGE",
     status: "PENDING",
-    progress: 0,
-    explanation:
-      "🔥 Ben sent a quick learning duel. Accept only if the mission fits your day.",
+    attention: true,
+    direction: "INCOMING",
+    escrowHeld: false,
+    title: "Teach a tiny thing",
+    location: "Campus",
+    person: "Ben",
+    description: "Ben challenged you to teach one tiny skill before tonight.",
+    timeLeft: "58 min",
+    stake: 25,
   },
   {
-    id: "challenge-alyssa",
-    direction: "OUTGOING",
-    person: "Alyssa",
-    title: "Make campus kinder",
-    stake: 15,
-    expires: "2 hrs",
+    id: "system-pastry",
+    kind: "SYSTEM",
     status: "PENDING",
-    progress: 0,
-    explanation:
-      "⚡ Delivered to Alyssa. Your 15 coins are safely held while she decides.",
+    attention: true,
+    direction: "INCOMING",
+    escrowHeld: false,
+    title: "Try a pastry you have never eaten",
+    location: "Near campus bakery",
+    person: "SideQuest",
+    description: "A spawned SideQuest. Accept only if it fits your day.",
+    timeLeft: "41 min",
+    stake: 30,
   },
-] as const;
-export const demoItems = [
-  { id: "item-1", kind: "WANT", text: "Try a pottery class" },
-  { id: "item-2", kind: "NEED", text: "Return library books" },
-] as const;
+];

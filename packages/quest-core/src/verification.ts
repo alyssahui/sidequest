@@ -1,6 +1,6 @@
 import type {
   Clock,
-  GpsEvidenceService,
+  QuestGpsEvidenceService,
   IdGenerator,
   VerificationAttempt,
   VerificationCheck,
@@ -17,7 +17,7 @@ export class VerificationRegistry {
   constructor(
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
-    private readonly gps: GpsEvidenceService,
+    private readonly gps: QuestGpsEvidenceService,
     private readonly photos: PhotoReviewPort,
   ) {}
   async evaluate(
@@ -40,16 +40,15 @@ export class VerificationRegistry {
         continue;
       }
       if (requirement.type === "GPS") {
-        if (!evidence.gps) {
-          checks.push({ type: "GPS", decision: "FAILED", code: "GPS_MISSING" });
-          continue;
-        }
+        if (!evidence.gps) throw new QuestError("INVALID_EVIDENCE");
         const result = await this.gps.evaluate({
           evidence: evidence.gps,
           target: requirement.target,
           radiusMeters: requirement.radiusMeters,
           maxAccuracyMeters: requirement.maxAccuracyMeters,
           serverNow: now,
+          userId,
+          questInstanceId: questId,
         });
         checks.push({
           type: "GPS",
@@ -58,14 +57,7 @@ export class VerificationRegistry {
         });
         continue;
       }
-      if (!evidence.photo) {
-        checks.push({
-          type: "PHOTO",
-          decision: "FAILED",
-          code: "PHOTO_MISSING",
-        });
-        continue;
-      }
+      if (!evidence.photo) throw new QuestError("INVALID_EVIDENCE");
       if (!/^media:\/\/[a-zA-Z0-9/_-]{1,180}$/.test(evidence.photo.mediaRef))
         throw new QuestError("PHOTO_REFERENCE_UNSAFE");
       const review = await this.photos.inspectReference(
@@ -110,14 +102,14 @@ export class VerificationRegistry {
     };
   }
 }
-export class DeterministicGpsEvidenceService implements GpsEvidenceService {
+export class DeterministicGpsEvidenceService implements QuestGpsEvidenceService {
   async evaluate({
     evidence,
     target,
     radiusMeters,
     maxAccuracyMeters,
     serverNow,
-  }: Parameters<GpsEvidenceService["evaluate"]>[0]) {
+  }: Parameters<QuestGpsEvidenceService["evaluate"]>[0]) {
     if (
       evidence.accuracyMeters < 0 ||
       evidence.accuracyMeters > maxAccuracyMeters

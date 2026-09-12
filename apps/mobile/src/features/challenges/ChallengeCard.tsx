@@ -68,7 +68,7 @@ export function ChallengeCard({
       ) : (
         <Text style={styles.safe}>
           {status === "REJECTED"
-            ? "Challenge declined. Every escrowed coin is returned—no hard feelings."
+            ? "Challenge declined. Every escrowed credit is returned—no hard feelings."
             : status === "ACCEPTED"
               ? "Duel live! Progress and final outcome notices will appear right here."
               : "Delivered and waiting for their choice. No location is shared before acceptance."}

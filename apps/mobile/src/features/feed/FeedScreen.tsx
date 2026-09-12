@@ -4,9 +4,7 @@ import type { FeedEvent } from "@sidequest/contracts/events";
 import { CoinAmount, HudCard } from "@sidequest/ui/components";
 import { colors, spacing } from "@sidequest/ui/theme";
 
-import { ScreenFrame } from "../shell/ScreenFrame";
-
-const feed: FeedEvent[] = [
+export const demoFeed: FeedEvent[] = [
   {
     id: "feed-1",
     type: "quest.completed",
@@ -18,22 +16,57 @@ const feed: FeedEvent[] = [
   },
   {
     id: "feed-2",
+    type: "prediction.won",
+    occurredAt: "2026-09-11T18:22:00.000Z",
+    actorDisplayName: "Alyssa",
+    title: "won a prediction on Ben",
+    detail: "COMPLETE pool paid out. Credit is virtual and stays in the party.",
+    coinDelta: 35,
+  },
+  {
+    id: "feed-3",
     type: "challenge.issued",
     occurredAt: "2026-09-11T18:10:00.000Z",
     actorDisplayName: "Chris",
     title: "challenged Maya",
     detail: "Find the weirdest drink under $5. Declining has no penalty.",
   },
+  {
+    id: "feed-4",
+    type: "quest.group_invite",
+    occurredAt: "2026-09-11T17:40:00.000Z",
+    actorDisplayName: "Party",
+    title: "invited everyone to a Boss Raid",
+    detail: "Saturday IKEA Expedition. Join from the map when you are nearby.",
+  },
+  {
+    id: "feed-5",
+    type: "unknown.future",
+    occurredAt: "2026-09-11T17:00:00.000Z",
+    actorDisplayName: "Party",
+    title: "posted a party note",
+    detail: "Something happened in the party. Details stay private.",
+  },
 ];
 
-function FeedEventCard({ event }: { event: FeedEvent }) {
+const icons: Record<string, string> = {
+  "quest.completed": "🏆",
+  "prediction.won": "◉",
+  "challenge.issued": "⚔️",
+  "quest.group_invite": "⚡",
+};
+
+function eventIcon(type: string) {
+  return icons[type] ?? "✦";
+}
+
+export function FeedEventCard({ event }: { event: FeedEvent }) {
   return (
     <HudCard
       accessibilityLabel={`${event.actorDisplayName ?? "Party"} ${event.title}`}
     >
       <Text style={styles.title}>
-        {event.type === "quest.completed" ? "🏆" : "⚔️"}{" "}
-        {event.actorDisplayName} {event.title}
+        {eventIcon(event.type)} {event.actorDisplayName} {event.title}
       </Text>
       {event.detail ? <Text style={styles.detail}>{event.detail}</Text> : null}
       {event.coinDelta ? <CoinAmount amount={event.coinDelta} /> : null}
@@ -41,13 +74,13 @@ function FeedEventCard({ event }: { event: FeedEvent }) {
   );
 }
 
-export function FeedScreen() {
+export function FeedEventList({ events }: { events: readonly FeedEvent[] }) {
   return (
-    <ScreenFrame eyebrow="THE STORY SO FAR" title="PARTY FEED">
-      {feed.map((event) => (
+    <>
+      {events.map((event) => (
         <FeedEventCard event={event} key={event.id} />
       ))}
-    </ScreenFrame>
+    </>
   );
 }
 

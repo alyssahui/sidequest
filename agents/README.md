@@ -4,7 +4,7 @@ This directory contains ready-to-paste prompts for four Codex instances. Each pr
 
 ## Decisions made during review
 
-- The canonical navigation is `MAP · QUESTS · PARTY · FEED · PROFILE`. The mockup's `BET` tab is superseded by the written five-tab specification. Betting opens contextually from a quest, challenge, feed event, or member profile.
+- The canonical navigation is `MAP · QUESTS · PARTY · BET · PROFILE`. Party includes the former feed as an in-page Story tab. Bet is the play-money COMPLETE / FAIL market; it still also appears contextually on quests.
 - The palette and arcade/HUD direction in `design/sidequest.png` are references, not a pixel-perfect mandate. Preserve the warm orange, oxblood, cream, and deep-teal character while improving hierarchy, spacing, contrast, touch targets, and safe-area handling.
 - `agents/SIDEQUEST.txt` is truncated at the end. Where it is incomplete, `agents/INIT_PROMPTS.txt` and `agents/SHARED_CONTRACT.md` are authoritative.
 - Coins are closed-loop virtual points: never purchasable, cashable, transferable outside the game, or described as investments. The product is a friendly prediction game, not real-money gambling.

@@ -5,6 +5,12 @@ import { demoQuestServices, seedQuestDemo } from "./demo";
 type QuestRoutesOptions = {
   services?: typeof demoQuestServices;
   seed?: typeof seedQuestDemo;
+  suggestionEnhancer?: {
+    enhanceSuggestions(
+      suggestions: ReturnType<typeof demoQuestServices.spawning.suggest>,
+      context: { area: string; preferenceTags: string[] },
+    ): Promise<ReturnType<typeof demoQuestServices.spawning.suggest>>;
+  };
 };
 const key = (headers: Record<string, unknown>) =>
   typeof headers["idempotency-key"] === "string"
@@ -94,26 +100,36 @@ export const questRoutes: FastifyPluginAsync<QuestRoutesOptions> = async (
   app.get("/quest-suggestions", async (request) => {
     const q = request.query as Partial<SpawnContext>;
     const now = services.clock.now().toISOString();
+    const context = {
+      area: String(q.area ?? "CMU"),
+      preferenceTags: Array.isArray(q.preferenceTags)
+        ? q.preferenceTags
+        : ["community", "learning"],
+    };
+    const suggestions = services.spawning.suggest(
+      {
+        userId: request.principal.userId,
+        now,
+        area: context.area,
+        placeCategories: Array.isArray(q.placeCategories)
+          ? q.placeCategories
+          : [],
+        preferenceTags: context.preferenceTags,
+        socialPreference: q.socialPreference ?? "either",
+        nearbyMemberCount: Number(q.nearbyMemberCount ?? 1),
+        activeCount: Number(q.activeCount ?? 0),
+        spawnedCount: Number(q.spawnedCount ?? 0),
+        history: [],
+      },
+      DEMO_TEMPLATES,
+    );
     return {
-      suggestions: services.spawning.suggest(
-        {
-          userId: request.principal.userId,
-          now,
-          area: String(q.area ?? "CMU"),
-          placeCategories: Array.isArray(q.placeCategories)
-            ? q.placeCategories
-            : [],
-          preferenceTags: Array.isArray(q.preferenceTags)
-            ? q.preferenceTags
-            : ["community", "learning"],
-          socialPreference: q.socialPreference ?? "either",
-          nearbyMemberCount: Number(q.nearbyMemberCount ?? 1),
-          activeCount: Number(q.activeCount ?? 0),
-          spawnedCount: Number(q.spawnedCount ?? 0),
-          history: [],
-        },
-        DEMO_TEMPLATES,
-      ),
+      suggestions: options.suggestionEnhancer
+        ? await options.suggestionEnhancer.enhanceSuggestions(
+            suggestions,
+            context,
+          )
+        : suggestions,
     };
   });
   app.get(

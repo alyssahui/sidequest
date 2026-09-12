@@ -12,6 +12,7 @@ import { registerLocationModule } from "./modules/location";
 import { createQuestGpsEvidenceService } from "./modules/location/questGpsAdapter";
 import { challengeRoutes } from "./modules/challenges/routes";
 import { createDemoQuestRuntime } from "./modules/quests/demo";
+import { createCvPhotoReview } from "./modules/quests/cvPhotoReview";
 import { questRoutes } from "./modules/quests/routes";
 import { registerMarketRoutes } from "./modules/markets/routes";
 import {
@@ -77,6 +78,10 @@ export function buildApp() {
     // Verification now evaluates the reading the location module stored and
     // validated, rather than trusting coordinates posted in the request body.
     gps: createQuestGpsEvidenceService({ service: location.service }),
+    photo: createCvPhotoReview({
+      endpoint: process.env.CV_API_URL,
+      apiKey: process.env.CV_API_KEY,
+    }),
   });
   const demoQuestServices = questRuntime.services;
 
@@ -128,6 +133,7 @@ export function buildApp() {
     prefix: "/v1",
     services: demoQuestServices,
     seed: questRuntime.seed,
+    suggestionEnhancer: grok,
   });
   app.register(challengeRoutes, {
     prefix: "/v1",

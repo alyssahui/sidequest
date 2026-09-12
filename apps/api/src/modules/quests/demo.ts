@@ -7,6 +7,7 @@ import {
   QuestSuggestionService,
   VerificationRegistry,
   DEMO_TEMPLATES,
+  type PhotoReviewPort,
 } from "@sidequest/quest-core";
 import type {
   Clock,
@@ -31,6 +32,7 @@ type DemoQuestOverrides = {
   economy?: EconomyPort;
   events?: InMemoryEventBus;
   memberships?: PartyMembershipPort;
+  photo?: PhotoReviewPort;
 };
 
 export function createDemoQuestRuntime(overrides: DemoQuestOverrides = {}) {
@@ -44,7 +46,7 @@ export function createDemoQuestRuntime(overrides: DemoQuestOverrides = {}) {
     clock,
     ids,
     overrides.gps ?? new DeterministicGpsEvidenceService(),
-    new DemoPhotoReview(),
+    overrides.photo ?? new DemoPhotoReview(),
   );
   const services = {
     clock,

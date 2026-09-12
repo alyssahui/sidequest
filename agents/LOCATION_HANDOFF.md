@@ -124,10 +124,10 @@ API base so the app and API are same-origin. The dev server has no such proxy,
 and the API sends no CORS headers. Only the **static export behind a proxy**
 path is tested. Add `@fastify/cors` if you want the dev-server loop.
 
-**G. Nothing serves the built PWA in-repo.** I used a throwaway static server
-with a `/v1/*` proxy that lived in a session scratchpad and is gone. There is no
-committed way to serve `apps/mobile/dist` with the API proxied. Worth adding a
-small `scripts/serve-web.mjs`.
+**G. ~~Nothing serves the built PWA in-repo.~~** _(fixed)_
+`corepack pnpm serve:web` runs `scripts/serve-web.mjs`, which serves
+`apps/mobile/dist` with extensionless routing and `/v1/*` proxied to the API,
+so the app and its API share an origin and no CORS setup is needed.
 
 **H. `.nvmrc` is untracked.** Node 24 is what all of this was built and verified
 against; `package.json` only says `>=22.13.0`. It predates this branch so I left

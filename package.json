@@ -10,6 +10,7 @@
     "dev": "corepack pnpm --filter @sidequest/mobile start",
     "dev:api": "corepack pnpm --filter @sidequest/api dev",
     "build:web": "corepack pnpm --filter @sidequest/mobile build:web",
+    "serve:web": "node scripts/serve-web.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "corepack pnpm -r typecheck",

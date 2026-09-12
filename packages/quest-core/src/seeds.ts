@@ -154,4 +154,29 @@ export const DEMO_TEMPLATES: QuestTemplate[] = [
       at("TIME"),
     ],
   },
+  {
+    id: "photo-verification-sandbox",
+    title: "Snack Scout · photo test",
+    description:
+      "Photograph a food or drink item you have right now. This is a safe, no-stakes vision-verification sandbox.",
+    category: "wellness",
+    tags: ["photo", "food", "demo"],
+    ...base,
+    spawnRules: {
+      areas: ["ANYWHERE"],
+      placeCategories: [],
+      social: "solo",
+      minimumNearbyMembers: 0,
+      cooldownHours: 0,
+    },
+    defaultRequirements: [
+      {
+        type: "PHOTO",
+        prompt:
+          "Show a clearly visible food or drink item. Do not include private messages, IDs, or other people.",
+        review: "MANUAL_OR_DEMO",
+      },
+      at("TIME"),
+    ],
+  },
 ];

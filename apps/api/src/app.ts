@@ -129,7 +129,7 @@ export function buildApp() {
   app.post("/v1/demo/photo-test", async (request) => {
     const key = `photo-test-${request.principal.userId}`;
     const spawned = await demoQuestServices.quests.spawn({
-      templateId: "pgh-reconnect",
+      templateId: "photo-verification-sandbox",
       ownerUserId: request.principal.userId,
       partyId: request.principal.partyIds[0],
       expiresAt: new Date(Date.now() + 24 * 3_600_000).toISOString(),

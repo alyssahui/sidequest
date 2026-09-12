@@ -70,6 +70,18 @@ export function MapSurface({
   const [points, setPoints] = useState<Record<string, ScreenPoint>>({});
   const hasFramedRef = useRef(false);
 
+  /**
+   * Latest position and markers, for the map's own event handlers.
+   *
+   * The `move` handler is registered once, when the map is built, so a handler
+   * that closed over props directly would keep re-projecting the values from
+   * that first render — at which point the player has no fix yet and the
+   * markers still sit at their default coordinates. Every camera movement
+   * would then throw the overlay back to stale positions.
+   */
+  const latestRef = useRef({ playerPosition, markers });
+  latestRef.current = { playerPosition, markers };
+
   // Everything the map should keep in view.
   const framed = useMemo(
     () => [
@@ -139,7 +151,8 @@ export function MapSurface({
 
         const sync = () => {
           if (cancelled) return;
-          setPoints(projectAll(map, playerPosition, markers));
+          const latest = latestRef.current;
+          setPoints(projectAll(map, latest.playerPosition, latest.markers));
         };
 
         map.on("load", () => {

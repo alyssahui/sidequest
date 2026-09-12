@@ -6,6 +6,7 @@ import type {
   GpsRequirement,
   LocationAvailability,
   LocationPermissionLevel,
+  LocationPermissionState,
   LocationRejection,
   LocationSample,
   LocationSession,
@@ -210,8 +211,9 @@ export function useLocationSession(options: UseLocationSessionOptions) {
         preferBackground && capability.nextRequest === "BACKGROUND"
           ? "BACKGROUND"
           : "FOREGROUND";
+      let granted: LocationPermissionState;
       try {
-        await provider.requestPermission(level);
+        granted = await provider.requestPermission(level);
       } catch (error) {
         patch({
           status: "ERROR",
@@ -222,8 +224,16 @@ export function useLocationSession(options: UseLocationSessionOptions) {
         });
         return;
       }
-      availability = await refreshAvailability();
-      if (!availability) return;
+
+      // Trust what the request returned rather than re-querying.
+      //
+      // Firefox reports `navigator.permissions.query({name:'geolocation'})` as
+      // "prompt" indefinitely unless the user ticks "Remember this decision",
+      // so a re-read right after a successful grant comes back as
+      // NOT_REQUESTED and the session would bail out before it ever started
+      // watching. The request's own answer is the authoritative one.
+      availability = { permission: granted, service: availability.service };
+      patch({ availability });
       capability = capabilityFor(availability);
     }
 

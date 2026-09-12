@@ -193,8 +193,10 @@ const styles = StyleSheet.create({
     borderColor: colors.brand,
     borderRadius: radii.lg,
     borderWidth: 1,
+    // No minHeight: the parent decides how tall the map is. A hard minimum
+    // here overflows the container on a short viewport — browser chrome at
+    // phone width — and paints the map over whatever follows it.
     flex: 1,
-    minHeight: 280,
     overflow: "hidden",
   },
   // Pinned low rather than centred: the middle of the map is where the player

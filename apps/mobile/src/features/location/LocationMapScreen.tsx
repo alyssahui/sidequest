@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import type { GpsRequirement } from "@sidequest/contracts/location";
 import { distanceMeters, type LocationProvider } from "@sidequest/location";
@@ -16,6 +22,7 @@ import { MapSurface } from "./map/MapSurface";
 import { QuestDetailSheet } from "./map/QuestDetailSheet";
 import type { QuestMarker } from "./map/markerRegistry";
 import { selectLocationProvider, type ProviderDecision } from "./providers";
+import { useDeviceLocation } from "./useDeviceLocation";
 import { useLocationSession } from "./useLocationSession";
 import { usePartyPresence } from "./usePartyPresence";
 
@@ -30,6 +37,14 @@ const DEMO_PARTY_ID = "party-demo";
  * to the projected game-world surface.
  */
 export function LocationMapScreen() {
+  const { height: windowHeight } = useWindowDimensions();
+  // Roughly the top 40% of the screen, bounded so it stays a usable map on a
+  // short laptop window and does not dominate a tall phone.
+  const mapHeight = Math.max(
+    260,
+    Math.min(440, Math.round(windowHeight * 0.4)),
+  );
+
   const config = useMemo(() => readLocationConfig(), []);
   const api = useMemo(
     () => new LocationApi({ baseUrl: config.apiUrl }),
@@ -83,6 +98,9 @@ export function LocationMapScreen() {
 
   const requirement: GpsRequirement | undefined = trackedMarker?.requirement;
 
+  // Where the player is, for their own map. No server session, no upload.
+  const device = useDeviceLocation({ provider });
+
   const session = useLocationSession({
     api,
     config,
@@ -99,7 +117,10 @@ export function LocationMapScreen() {
   });
 
   const playerPosition =
+    // The tracking session's fix is preferred while a quest is running, since
+    // it is the one being uploaded as evidence; otherwise the display watch.
     session.sample?.coordinates ??
+    device.sample?.coordinates ??
     // Before the first fix the demo player stands at the route origin, so the
     // map is populated rather than empty.
     (decision?.kind === "SIMULATED" ? demoPlayerStart : null);
@@ -147,10 +168,9 @@ export function LocationMapScreen() {
           ? "LIVE WORLD · SIMULATED LOCATION"
           : "LIVE WORLD"
       }
-      scroll={false}
       title="SIDEQUEST"
     >
-      <View style={styles.mapWrap}>
+      <View style={[styles.mapWrap, { height: mapHeight }]}>
         <MapSurface
           config={config}
           markers={markers}
@@ -162,14 +182,15 @@ export function LocationMapScreen() {
         />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.sheet}
-        style={styles.sheetScroll}
-      >
+      <View style={styles.sheet}>
         <PermissionGate
-          availability={session.availability}
-          onRequestBackground={() => void session.start()}
-          onRequestForeground={() => void session.start()}
+          availability={device.availability}
+          onRequestBackground={() =>
+            void device.requestPermission("BACKGROUND")
+          }
+          onRequestForeground={() =>
+            void device.requestPermission("FOREGROUND")
+          }
         />
 
         {session.rejection ? (
@@ -182,6 +203,13 @@ export function LocationMapScreen() {
             <Text style={styles.rejectionBody}>
               {session.rejection.message}
             </Text>
+          </HudCard>
+        ) : null}
+
+        {device.error && !session.error ? (
+          <HudCard accessibilityLabel="Location error">
+            <Text style={styles.rejectionTitle}>⚠️ LOCATION UNAVAILABLE</Text>
+            <Text style={styles.rejectionBody}>{device.error}</Text>
           </HudCard>
         ) : null}
 
@@ -243,18 +271,18 @@ export function LocationMapScreen() {
             native location module. A development build uses real GPS.
           </Text>
         ) : null}
-      </ScrollView>
+      </View>
     </ScreenFrame>
   );
 }
 
 const styles = StyleSheet.create({
-  // Both panes share the column by flex ratio. A percentage maxHeight here
-  // resolves against the parent independently of the map's flex basis, so the
-  // two could total more than the screen and the sheet would cover the map.
-  mapWrap: { flex: 5, minHeight: 160 },
-  sheetScroll: { flex: 4 },
-  sheet: { gap: spacing.md, paddingBottom: spacing.md },
+  // The map gets an explicit height and the page scrolls, rather than two flex
+  // panes competing for a viewport whose height changes as browser chrome
+  // shows and hides. Flex ratios plus minimums were what let the map paint
+  // over the content below it at phone width.
+  mapWrap: { width: "100%" },
+  sheet: { gap: spacing.md, paddingBottom: spacing.xl },
   rejectionTitle: {
     color: colors.brandDeep,
     fontSize: typeScale.body,

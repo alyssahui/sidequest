@@ -283,6 +283,20 @@ forces the simulator.
 
 ### Map
 
+On **web** the map is real: MapLibre GL JS over CARTO's dark raster basemap
+(OpenStreetMap data). No native module, no development build, and no access
+token, so it satisfies the no-credentials rule while showing actual streets.
+Override the tiles with `EXPO_PUBLIC_MAP_TILE_URL` and
+`EXPO_PUBLIC_MAP_ATTRIBUTION`; attribution is required by the providers' terms
+and is rendered by the map's own control.
+
+Markers are not MapLibre markers — they are the same React Native views the
+fallback uses, positioned from `map.project()` and repositioned on each camera
+move, so there is one marker registry and one set of accessibility labels
+across both surfaces. If MapLibre fails to load, the surface degrades to the
+deterministic one rather than breaking the screen.
+
+On **native** there is still no real basemap.
 `@rnmapbox/maps` is deliberately **not** a dependency of this workspace. It is a
 native module that cannot run in Expo Go and would force every parallel branch
 through a prebuild. `MapSurface` is the adapter; `FallbackMapSurface` is the

@@ -18,6 +18,10 @@ export type LocationFeatureConfig = {
   /** Simulated seconds advanced per tick, so a demo walk can be sped up. */
   simulatorSecondsPerTick: number;
   mapboxToken: string | null;
+  /** Raster tile template for the web basemap. */
+  mapTileUrl: string;
+  /** Attribution text. Required by the tile providers' terms. */
+  mapAttribution: string;
   /** Cadence for foreground watching, in milliseconds. */
   watchIntervalMs: number;
   watchDistanceIntervalMeters: number;
@@ -64,6 +68,15 @@ export function readLocationConfig(
     // 15x speed: the ~11 minute demo walk finishes in about 45 seconds.
     simulatorSecondsPerTick: 15,
     mapboxToken,
+    // CARTO's dark basemap over OpenStreetMap data: free, no access token, and
+    // it suits the HUD palette better than a light street map. Override to
+    // point at any other raster tile service.
+    mapTileUrl:
+      env("EXPO_PUBLIC_MAP_TILE_URL") ??
+      "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png",
+    mapAttribution:
+      env("EXPO_PUBLIC_MAP_ATTRIBUTION") ??
+      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/attributions">CARTO</a>',
     watchIntervalMs: 5_000,
     watchDistanceIntervalMeters: 10,
     ...overrides,

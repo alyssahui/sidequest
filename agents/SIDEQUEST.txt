@@ -1,0 +1,223 @@
+﻿SIDEQUEST
+Concept: A multiplayer game layered onto real life. Friends form a Party, complete real-world SideQuests, challenge each other, bet virtual credits on outcomes, discover dynamically spawned activities, and organize larger group activities called Boss Raids.
+Design feeling: See sidequest.png and sidequest.fig from design folder.
+Core Navigation
+Design around 5 primary areas:
+MAP · QUESTS · PARTY · FEED · PROFILE
+The Map should feel like the "home world" and ideally be the default screen.
+________________
+
+
+1. MAP — The Game World
+This is the primary experience.
+Show:
+* User's current location
+* Party members currently sharing location
+* Nearby SideQuest objectives
+* Random/adaptively spawned quests
+* Multiplayer quests
+* Boss Raids
+* Interesting locations/objectives
+* Temporary/limited-time events
+Quests should appear as game-like markers rather than ordinary map pins.
+Example:
+🍓 SIDEQUEST SPAWNED
+300m away
+Try something you've never eaten before
+🪙 +30
+Expires in 42 min
+If multiple friends are nearby:
+⚡ MULTIPLAYER QUEST AVAILABLE
+3 Party members nearby
+Find somewhere none of you have eaten before.
+Design goal: Opening the map should create the feeling that things are happening around me right now.
+________________
+
+
+2. QUESTS
+Central place for the player's activities.
+Sections could include:
+ACTIVE — Current accepted quests with timers, progress, rewards and verification requirements.
+NEARBY — Quests currently spawned around the player.
+CHALLENGES — Quests friends have challenged the player to complete.
+MY LIST — Things the user has said they want/need to do.
+Examples:
+📦 Return Amazon package
+🍜 Try Korean BBQ
+🧗 Go rock climbing
+🛒 Buy groceries
+SideQuest can transform these into actual quests at appropriate moments.
+________________
+
+
+3. CHALLENGES
+A player can challenge another Party member to complete something.
+Example:
+⚔️ CHALLENGE BEN
+Go to the gym before 9 PM
+🪙 50 at stake
+📍 GPS verification
+Ben receives:
+⚔️ ZURI CHALLENGED YOU
+Go to the gym before 9 PM.
+ACCEPT · DECLINE
+Declining has no penalty.
+Once accepted, the player is committed.
+Complete → win Coins.
+Fail → lose Coins.
+Accepting should feel like accepting a duel.
+________________
+
+
+4. BETTING (prediction market off kalshi)
+Once somebody accepts a quest, Party members can bet virtual Coins 🪙 on:
+COMPLETE or FAIL
+Example:
+🎯 WILL BEN ACTUALLY GO?
+✅ COMPLETE — 🪙80
+❌ FAIL — 🪙210
+47 minutes remaining
+PLACE BET
+Winning bettors receive Coins from the losing pool.
+Self-Bounties
+Players can put Coins behind their own promise.
+🎯 ZURI PUT A BOUNTY ON THEMSELF
+Finish assignment before midnight.
+Zuri's stake: 🪙100
+Friends betting against: 🪙240
+The emotional loop is:
+"I bet you won't." → "Watch me."
+Coins are virtual game currency only, not purchasable or redeemable for money.
+________________
+
+
+5. QUEST VERIFICATION
+Keep verification extremely simple. SideQuest uses only three verification types:
+📍 GPS
+The player must physically reach a location.
+Examples:
+* Go to the gym
+* Visit a specific restaurant
+* Reach a viewpoint
+* Go to the grocery store
+When they arrive:
+📍 LOCATION VERIFIED
+📸 PHOTO
+The player must take a photo proving they completed the objective.
+Examples:
+* Try a weird food
+* Find something purple
+* Cook dinner
+* Clean your room
+* Find a specific object
+The app can optionally use image recognition to check whether the photo reasonably matches the quest.
+📸 PHOTO VERIFIED
+⏱ TIME
+The quest must be completed before a deadline or within a time window.
+Examples:
+* Go to the gym before 9 PM
+* Reach the restaurant within 30 minutes
+* Finish your assignment tonight
+Time is often combined with GPS or photo verification.
+⏱ COMPLETED WITH 03:42 REMAINING
+A quest can therefore simply specify:
+Verification: 📍 GPS + ⏱ Time
+or
+Verification: 📸 Photo + ⏱ Time
+No QR codes, NFC, manual check-ins, or complicated verification systems are needed for the initial product.
+________________
+
+
+6. ADAPTIVE QUEST SPAWNING
+SideQuest generates activities based on context:
+* User interests
+* Want/Need list
+* Location
+* Time
+* Nearby places
+* Nearby Party members
+* Previous quest behavior
+Example:
+User likes food and says they want to try more bakeries.
+Walking near a bakery triggers:
+🥐 SIDEQUEST SPAWNED
+Find a pastry you've never eaten.
+140m away · 🪙25
+The Quest Spawned moment should feel exciting and unexpected.
+________________
+
+
+7. MULTIPLAYER PROXIMITY QUESTS
+When Party members happen to be physically near one another, SideQuest can automatically spawn multiplayer activities.
+⚡ PARTY MEMBERS DETECTED
+Zuri, Alyssa & Ben are nearby.
+MULTIPLAYER SIDEQUEST SPAWNED
+Find somewhere none of you have eaten before.
+🪙150 Party Reward
+The app should make spontaneous proximity feel like a game event.
+________________
+
+
+8. PARTY
+A Party is the persistent friend group.
+Show:
+* Avatar
+* Coins
+* Current quest
+* Quests completed
+* Quests failed
+* Challenge record
+* Betting record
+* Streak
+* Boss Raid participation
+* Funny titles/achievements
+Stats should primarily encourage friendly competition and trash talk.
+________________
+
+
+9. PARTY FEED + CHAT
+The Party has a shared game/event feed.
+🏆 Zuri completed
+"7 AM Run"
++120 🪙
+6 people bet against them.
+💀 Ben failed
+"Gym before 9 PM"
+-60 🪙
+💰 Alyssa won her bet against Ben
++35 🪙
+⚔️ Chris challenged Maya
+"Find the weirdest drink under $5."
+☠️ NEW BOSS RAID
+"Saturday IKEA Expedition"
+Players can react, comment, trash-talk, bet, or join activities directly from the feed.
+________________
+
+
+10. PROFILE / PERSONALIZATION
+Players tell SideQuest enough about themselves to generate good quests.
+I LIKE
+Food, hiking, photography, thrifting, weird stores...
+I WANT TO TRY
+Rock climbing, pottery, Korean BBQ...
+I NEED TO DO
+Groceries, laundry, homework, exercise...
+QUEST STYLE
+Chill ←────────→ Unhinged
+SOCIAL
+Solo / Friends / Either
+This should feel like configuring your player character, not filling out a questionnaire.
+________________
+
+
+FIGMA PRIORITY
+Prototype this core flow first:
+MAP
+↓
+Random quest spawns
+↓
+Accept quest
+↓
+Friends bet COMPLETE / FAIL
+↓
+**Player travels/com

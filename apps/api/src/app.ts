@@ -83,6 +83,8 @@ export function buildApp() {
       endpoint: process.env.CV_API_URL,
       apiKey: process.env.CV_API_KEY,
       resolveMedia: (mediaRef) => uploadedPhotos.get(mediaRef),
+      grokApiKey: process.env.XAI_API_KEY,
+      grokModel: process.env.XAI_VISION_MODEL,
     }),
   });
   const demoQuestServices = questRuntime.services;
@@ -116,15 +118,38 @@ export function buildApp() {
       ) ||
       body.dataUrl.length > 7_000_000
     )
-      return reply
-        .code(400)
-        .send({
-          code: "PHOTO_UPLOAD_INVALID",
-          message: "Upload a JPEG, PNG, or WebP image smaller than 5 MB.",
-        });
+      return reply.code(400).send({
+        code: "PHOTO_UPLOAD_INVALID",
+        message: "Upload a JPEG, PNG, or WebP image smaller than 5 MB.",
+      });
     const mediaRef = `media://uploads/${ids.next()}`;
     uploadedPhotos.set(mediaRef, body.dataUrl);
     return { mediaRef };
+  });
+  app.post("/v1/demo/photo-test", async (request) => {
+    const key = `photo-test-${request.principal.userId}`;
+    const spawned = await demoQuestServices.quests.spawn({
+      templateId: "pgh-reconnect",
+      ownerUserId: request.principal.userId,
+      partyId: request.principal.partyIds[0],
+      expiresAt: new Date(Date.now() + 24 * 3_600_000).toISOString(),
+      reasonForYou:
+        "Photo verification sandbox · upload any safe food or everyday-object photo.",
+      idempotencyKey: key,
+    });
+    const accepted = await demoQuestServices.quests.accept({
+      questId: spawned.id,
+      actorUserId: request.principal.userId,
+      expectedVersion: spawned.version,
+      idempotencyKey: `${key}:accept`,
+    });
+    const quest = await demoQuestServices.quests.start({
+      questId: accepted.id,
+      actorUserId: request.principal.userId,
+      expectedVersion: accepted.version,
+      idempotencyKey: `${key}:start`,
+    });
+    return { quest };
   });
   app.get("/v1/demo/session", async (request) => ({
     user: demoUsers.find((user) => user.id === request.principal.userId),

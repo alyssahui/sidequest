@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
-import type { Challenge } from "@sidequest/contracts";
+import type { Challenge, QuestInstance } from "@sidequest/contracts";
 import { colors, radii } from "@sidequest/ui/theme";
 
 import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
@@ -45,6 +45,26 @@ function toItem(challenge: Challenge, viewerId: string): QuestItem {
   };
 }
 
+function photoTestItem(quest: QuestInstance): QuestItem {
+  return {
+    id: quest.id,
+    serverQuestId: quest.id,
+    serverVersion: quest.version,
+    kind: "OWN",
+    status: "ACTIVE",
+    attention: true,
+    direction: "SELF",
+    escrowHeld: false,
+    title: "PHOTO TEST · " + quest.title,
+    location: "Anywhere safe",
+    person: "You",
+    description:
+      "Upload a photo now. Grok checks whether it plausibly fits the evidence prompt; final review stays human-controlled.",
+    timeLeft: "24 hrs",
+    stake: 0,
+  };
+}
+
 export function QuestsScreen() {
   const { request, user } = useDemoSession();
   const [localQuests, setLocalQuests] = useState<QuestItem[]>(demoQuests);
@@ -52,10 +72,11 @@ export function QuestsScreen() {
   const [balance, setBalance] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [photoTest, setPhotoTest] = useState<QuestItem | null>(null);
   const [sync, setSync] = useState("Connecting…");
   const quests = useMemo(
-    () => [...sharedQuests, ...localQuests],
-    [localQuests, sharedQuests],
+    () => [...(photoTest ? [photoTest] : []), ...sharedQuests, ...localQuests],
+    [localQuests, photoTest, sharedQuests],
   );
   const selected = quests.find((quest) => quest.id === selectedId);
 
@@ -109,6 +130,16 @@ export function QuestsScreen() {
 
   function close() {
     setSelectedId(null);
+  }
+
+  async function startPhotoTest() {
+    const result = await request<{ quest: QuestInstance }>(
+      "/v1/demo/photo-test",
+      { method: "POST" },
+    );
+    const item = photoTestItem(result.quest);
+    setPhotoTest(item);
+    setSelectedId(item.id);
   }
 
   async function respond(accept: boolean) {
@@ -224,14 +255,24 @@ export function QuestsScreen() {
     <ScreenFrame
       eyebrow="HUMAN ACTION · GROK MISSION INTELLIGENCE"
       headerRight={
-        <Pressable
-          accessibilityLabel="Add a task or challenge a friend"
-          accessibilityRole="button"
-          onPress={() => setAdding(true)}
-          style={styles.add}
-        >
-          <Text style={styles.addText}>+</Text>
-        </Pressable>
+        <>
+          <Pressable
+            accessibilityLabel="Start photo verification test"
+            accessibilityRole="button"
+            onPress={() => void startPhotoTest()}
+            style={styles.photoTest}
+          >
+            <Text style={styles.photoTestText}>📸 TEST</Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Add a task or challenge a friend"
+            accessibilityRole="button"
+            onPress={() => setAdding(true)}
+            style={styles.add}
+          >
+            <Text style={styles.addText}>+</Text>
+          </Pressable>
+        </>
       }
       title="QUESTS"
     >
@@ -271,7 +312,7 @@ export function QuestsScreen() {
                 "idempotency-key": `photo-${selected.id}-${Date.now()}`,
               },
               body: JSON.stringify({
-                expectedVersion: 1,
+                expectedVersion: selected.serverVersion ?? 1,
                 evidence: { photo: { mediaRef: uploaded.mediaRef } },
               }),
             });
@@ -307,6 +348,16 @@ const styles = StyleSheet.create({
     lineHeight: 30,
     marginTop: -2,
   },
+  photoTest: {
+    alignItems: "center",
+    borderColor: colors.brand,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 44,
+    paddingHorizontal: 10,
+  },
+  photoTestText: { color: colors.brand, fontSize: 10, fontWeight: "900" },
   balance: {
     color: colors.surface,
     fontSize: 12,

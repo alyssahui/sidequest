@@ -1,0 +1,100 @@
+/**
+ * Environment-driven configuration for the location feature.
+ *
+ * Every value has a working default, so the app opens and the map runs with no
+ * `.env` file at all. Credentials only ever upgrade the experience; they are
+ * never required to reach it.
+ */
+
+export type LocationProviderKind = "EXPO" | "SIMULATED";
+
+export type LocationFeatureConfig = {
+  apiUrl: string;
+  providerKind: LocationProviderKind;
+  /** Demo route the simulator walks when `providerKind` is SIMULATED. */
+  simulatedRouteId: string;
+  /** Wall-clock milliseconds between simulated ticks. */
+  simulatorTickMs: number;
+  /** Simulated seconds advanced per tick, so a demo walk can be sped up. */
+  simulatorSecondsPerTick: number;
+  mapboxToken: string | null;
+  /** Raster tile template for the web basemap. */
+  mapTileUrl: string;
+  /** Attribution text. Required by the tile providers' terms. */
+  mapAttribution: string;
+  /** Invert the raster tiles so a light basemap matches the dark HUD. */
+  mapDarkenTiles: boolean;
+  /** Cadence for foreground watching, in milliseconds. */
+  watchIntervalMs: number;
+  watchDistanceIntervalMeters: number;
+};
+
+/**
+ * Base URL when none is configured.
+ *
+ * On web an absolute `http://localhost:3000` is a *different origin* from
+ * wherever the page is served, so every request fails CORS preflight. A
+ * relative base keeps the app same-origin, which is also how a deployed PWA is
+ * normally served (app and API behind one host). Native has no origin, so it
+ * still needs a real URL.
+ */
+function defaultApiUrl(): string {
+  const isWeb =
+    typeof document !== "undefined" && typeof window !== "undefined";
+  return isWeb ? "" : "http://localhost:3000";
+}
+
+const env = (key: string): string | undefined => {
+  // Expo inlines EXPO_PUBLIC_* at build time, so this must be a static lookup
+  // per key rather than a dynamic index into process.env.
+  const value = process.env[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+export function readLocationConfig(
+  overrides: Partial<LocationFeatureConfig> = {},
+): LocationFeatureConfig {
+  const requested = env("EXPO_PUBLIC_LOCATION_PROVIDER")?.toUpperCase();
+  const mapboxToken = env("EXPO_PUBLIC_MAPBOX_TOKEN") ?? null;
+
+  return {
+    apiUrl: env("EXPO_PUBLIC_API_URL") ?? defaultApiUrl(),
+    // Defaulting to the simulator would hide a broken device path, and
+    // defaulting to Expo would break CI and emulators without a mock location.
+    // So: honour an explicit choice, otherwise use the real provider and let
+    // the runtime probe fall back if the native module is missing.
+    providerKind: requested === "SIMULATED" ? "SIMULATED" : "EXPO",
+    simulatedRouteId:
+      env("EXPO_PUBLIC_LOCATION_ROUTE") ?? "route-craig-street-bakery",
+    simulatorTickMs: 1_000,
+    // 15x speed: the ~11 minute demo walk finishes in about 45 seconds.
+    simulatorSecondsPerTick: 15,
+    mapboxToken,
+    // OpenStreetMap's own tiles: genuinely free and unkeyed. CARTO's dark
+    // basemap would suit the palette better but now stamps "API KEY REQUIRED"
+    // across every unkeyed tile, so it is opt-in via this variable rather than
+    // the default. Respect the OSM tile usage policy for anything beyond a
+    // demo, and keep the attribution.
+    mapTileUrl:
+      env("EXPO_PUBLIC_MAP_TILE_URL") ??
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    mapAttribution:
+      env("EXPO_PUBLIC_MAP_ATTRIBUTION") ??
+      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    // OSM ships a light basemap; the app is dark. Inverting the tiles is the
+    // standard way to get a dark street map without a paid style.
+    mapDarkenTiles: env("EXPO_PUBLIC_MAP_DARK") !== "false",
+    watchIntervalMs: 5_000,
+    watchDistanceIntervalMeters: 10,
+    ...overrides,
+  };
+}
+
+/**
+ * Whether the real map can render. Mapbox needs both a token and a native
+ * module, and neither is present in Expo Go, so the deterministic game-world
+ * surface is the normal path rather than an error state.
+ */
+export function canUseMapbox(config: LocationFeatureConfig): boolean {
+  return Boolean(config.mapboxToken);
+}

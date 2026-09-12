@@ -1,88 +1,195 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, radii, spacing } from "@sidequest/ui/theme";
+import type { Challenge } from "@sidequest/contracts";
+import { colors, radii } from "@sidequest/ui/theme";
 
+import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import { ScreenFrame } from "../shell/ScreenFrame";
 import { AddTaskOverlay } from "./AddTaskOverlay";
-import { DEMO_QUEST_BALANCE, demoQuests, type QuestItem } from "./demoData";
+import { demoQuests, type QuestItem } from "./demoData";
 import { QuestDetailOverlay } from "./QuestDetailOverlay";
 import { QuestRow } from "./QuestRow";
 
+const person = (id: string) =>
+  DEMO_USERS.find((user) => user.id === id)?.name ?? "Party member";
+
+function toItem(challenge: Challenge, viewerId: string): QuestItem {
+  const incoming = challenge.recipientUserId === viewerId;
+  const status =
+    challenge.status === "PENDING"
+      ? "PENDING"
+      : challenge.status === "ACCEPTED"
+        ? "ACTIVE"
+        : challenge.status === "COMPLETED"
+          ? "COMPLETE"
+          : "FAILED";
+  return {
+    id: challenge.id,
+    kind: "CHALLENGE",
+    status,
+    attention: incoming && challenge.status === "PENDING",
+    direction: incoming ? "INCOMING" : "OUTGOING",
+    escrowHeld: ["PENDING", "ACCEPTED"].includes(challenge.status),
+    title: challenge.title,
+    location: "Community mission",
+    person: person(
+      incoming ? challenge.issuerUserId : challenge.recipientUserId,
+    ),
+    description:
+      `${challenge.description} ${challenge.lastNotice ?? ""}`.trim(),
+    timeLeft: challenge.status === "PENDING" ? "24 hrs" : challenge.status,
+    stake: challenge.stakeCoins,
+    serverVersion: challenge.version,
+  };
+}
+
 export function QuestsScreen() {
-  const [quests, setQuests] = useState<QuestItem[]>(demoQuests);
-  const [balance, setBalance] = useState(DEMO_QUEST_BALANCE);
+  const { request, user } = useDemoSession();
+  const [localQuests, setLocalQuests] = useState<QuestItem[]>(demoQuests);
+  const [sharedQuests, setSharedQuests] = useState<QuestItem[]>([]);
+  const [balance, setBalance] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [sync, setSync] = useState("Connecting…");
+  const quests = useMemo(
+    () => [...sharedQuests, ...localQuests],
+    [localQuests, sharedQuests],
+  );
   const selected = quests.find((quest) => quest.id === selectedId);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [challengeResult, economy] = await Promise.all([
+        request<{ incoming: Challenge[]; outgoing: Challenge[] }>(
+          "/v1/challenges",
+        ),
+        request<{ balance: number }>("/v1/economy/me"),
+      ]);
+      setSharedQuests(
+        [...challengeResult.incoming, ...challengeResult.outgoing].map(
+          (challenge) => toItem(challenge, user.id),
+        ),
+      );
+      setBalance(economy.balance);
+      setSync("Shared with your party · refreshes every 3 seconds");
+    } catch (error) {
+      setSync(error instanceof Error ? error.message : "API unavailable");
+    }
+  }, [request, user.id]);
+
+  useEffect(() => {
+    setSelectedId(null);
+    void refresh();
+    const timer = setInterval(() => void refresh(), 3_000);
+    return () => clearInterval(timer);
+  }, [refresh]);
 
   function close() {
     setSelectedId(null);
   }
 
-  function accept() {
-    if (!selected || selected.stake > balance) return;
-    setBalance((current) => current - selected.stake);
-    setQuests((current) =>
-      current.map((quest) =>
-        quest.id === selected.id
-          ? {
-              ...quest,
-              attention: false,
-              status: "ACTIVE",
-              escrowHeld: true,
-            }
-          : quest,
-      ),
-    );
-    close();
-  }
-
-  function decline() {
+  async function respond(accept: boolean) {
     if (!selected) return;
-    setQuests((current) => current.filter((quest) => quest.id !== selected.id));
-    close();
-  }
-
-  function complete() {
-    if (!selected) return;
-    if (selected.escrowHeld) {
-      const payout =
-        selected.kind === "OWN" ? selected.stake : selected.stake * 2;
-      setBalance((current) => current + payout);
+    if (!selected.serverVersion) {
+      if (accept) {
+        if (selected.stake > balance) return;
+        setBalance((current) => current - selected.stake);
+        setLocalQuests((current) =>
+          current.map((quest) =>
+            quest.id === selected.id
+              ? {
+                  ...quest,
+                  status: "ACTIVE",
+                  attention: false,
+                  escrowHeld: true,
+                }
+              : quest,
+          ),
+        );
+      } else {
+        setLocalQuests((current) =>
+          current.filter((quest) => quest.id !== selected.id),
+        );
+      }
+      close();
+      return;
     }
-    setQuests((current) =>
-      current.map((quest) =>
-        quest.id === selected.id
-          ? { ...quest, status: "COMPLETE", attention: false }
-          : quest,
-      ),
-    );
+    await request(`/v1/challenges/${selected.id}/respond`, {
+      method: "POST",
+      headers: { "idempotency-key": `respond-${user.id}-${Date.now()}` },
+      body: JSON.stringify({ accept, expectedVersion: selected.serverVersion }),
+    });
     close();
+    await refresh();
   }
 
-  function fail() {
+  function completeLocal() {
     if (!selected) return;
-    setQuests((current) =>
+    if (selected.escrowHeld) setBalance((current) => current + selected.stake);
+    setLocalQuests((current) =>
       current.map((quest) =>
-        quest.id === selected.id
-          ? { ...quest, status: "FAILED", attention: false }
-          : quest,
+        quest.id === selected.id ? { ...quest, status: "COMPLETE" } : quest,
       ),
     );
     close();
   }
 
-  function create(quest: QuestItem) {
-    if (quest.stake > balance) return;
-    setBalance((current) => current - quest.stake);
-    setQuests((current) => [quest, ...current]);
+  async function resolve(completed: boolean) {
+    if (!selected?.serverVersion) {
+      if (completed) completeLocal();
+      else failLocal();
+      return;
+    }
+    await request(`/v1/demo/challenges/${selected.id}/resolve`, {
+      method: "POST",
+      headers: { "idempotency-key": `resolve-${user.id}-${Date.now()}` },
+      body: JSON.stringify({ completed }),
+    });
+    close();
+    await refresh();
+  }
+
+  function failLocal() {
+    if (!selected) return;
+    setLocalQuests((current) =>
+      current.map((quest) =>
+        quest.id === selected.id ? { ...quest, status: "FAILED" } : quest,
+      ),
+    );
+    close();
+  }
+
+  async function create(quest: QuestItem) {
+    if (quest.kind === "CHALLENGE") {
+      const recipient = DEMO_USERS.find(
+        (candidate) => candidate.name === quest.person,
+      );
+      if (!recipient) throw new Error("Choose a demo party member");
+      await request<Challenge>("/v1/challenges/custom", {
+        method: "POST",
+        headers: { "idempotency-key": `challenge-${user.id}-${Date.now()}` },
+        body: JSON.stringify({
+          recipientUserId: recipient.id,
+          partyId: "party-demo",
+          task: quest.title,
+          locationLabel: quest.location,
+          notes: quest.description,
+          deadline: new Date(Date.now() + 24 * 3600_000).toISOString(),
+          stakeCoins: quest.stake,
+        }),
+      });
+      await refresh();
+    } else {
+      setBalance((current) => current - quest.stake);
+      setLocalQuests((current) => [quest, ...current]);
+    }
     setAdding(false);
   }
 
   return (
     <ScreenFrame
-      eyebrow="YOUR ADVENTURES"
+      eyebrow="HUMAN ACTION · GROK MISSION INTELLIGENCE"
       headerRight={
         <Pressable
           accessibilityLabel="Add a task or challenge a friend"
@@ -96,6 +203,7 @@ export function QuestsScreen() {
       title="QUESTS"
     >
       <Text style={styles.balance}>YOUR CREDIT · ◉ {balance}</Text>
+      <Text style={styles.sync}>{sync}</Text>
       {quests.map((quest) => (
         <QuestRow
           key={quest.id}
@@ -106,11 +214,11 @@ export function QuestsScreen() {
       {selected ? (
         <QuestDetailOverlay
           balance={balance}
-          onAccept={accept}
+          onAccept={() => void respond(true)}
           onClose={close}
-          onComplete={complete}
-          onDecline={decline}
-          onFail={fail}
+          onComplete={() => void resolve(true)}
+          onDecline={() => void respond(false)}
+          onFail={() => void resolve(false)}
           quest={selected}
         />
       ) : null}
@@ -147,4 +255,5 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
   },
+  sync: { color: colors.brand, fontSize: 10, marginTop: -6 },
 });

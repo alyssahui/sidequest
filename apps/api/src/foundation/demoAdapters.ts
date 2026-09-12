@@ -16,6 +16,20 @@ export const demoPrincipal: RequestPrincipal = {
   partyIds: ["party-demo"],
 };
 
+export const demoUsers = [
+  { id: "user-zuri", name: "Zuri", avatar: "Z" },
+  { id: "user-ben", name: "Ben", avatar: "B" },
+  { id: "user-alyssa", name: "Alyssa", avatar: "A" },
+] as const;
+
+export function demoPrincipalFor(value: unknown): RequestPrincipal {
+  const userId =
+    typeof value === "string" && demoUsers.some((user) => user.id === value)
+      ? value
+      : demoPrincipal.userId;
+  return { userId, partyIds: ["party-demo"] };
+}
+
 export class SystemClock implements Clock {
   now() {
     return new Date();
@@ -32,7 +46,8 @@ export class DemoPartyMemberships implements PartyMembershipPort {
   async isMember(userId: string, partyId: string) {
     return (
       partyId === "party-demo" &&
-      ["user-zuri", "user-alyssa", "user-ben"].includes(userId)
+      (demoUsers.some((user) => user.id === userId) ||
+        userId.startsWith("user-grok-crowd-"))
     );
   }
 }

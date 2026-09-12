@@ -57,6 +57,7 @@ export const challengeRoutes: FastifyPluginAsync<
         locationLabel?: string;
         notes?: string;
         deadline: string;
+        stakeCoins?: number;
       };
       return await service.issueCustom({
         ...body,
@@ -108,6 +109,23 @@ export const challengeRoutes: FastifyPluginAsync<
         challengeId: (request.params as { id: string }).id,
         recipientUserId: request.principal.userId,
         ...body,
+        idempotencyKey: idempotency(request.headers),
+      });
+    } catch (error) {
+      return fail(reply, error);
+    }
+  });
+  app.post("/demo/challenges/:id/resolve", async (request, reply) => {
+    try {
+      const challengeId = (request.params as { id: string }).id;
+      const challenge = (await service.list(request.principal.userId)).find(
+        (candidate) => candidate.id === challengeId,
+      );
+      if (!challenge) throw new QuestError("NOT_AUTHORIZED");
+      const { completed } = request.body as { completed: boolean };
+      return await service.consumeQuestOutcome({
+        challengeId,
+        questStatus: completed ? "VERIFIED" : "FAILED",
         idempotencyKey: idempotency(request.headers),
       });
     } catch (error) {

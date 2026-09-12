@@ -15,6 +15,7 @@ export type QuestItem = {
   description: string;
   timeLeft: string;
   stake: number;
+  serverVersion?: number;
 };
 
 export const DEMO_QUEST_BALANCE = 420;

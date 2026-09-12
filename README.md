@@ -4,6 +4,44 @@ HackCMU 2026 — a multiplayer game layered onto real life. Friends discover nea
 
 SideQuest is an Expo/React Native app that runs on iOS, Android, and the web as an installable PWA. It includes a credential-free demo, so you do not need a database, Mapbox token, authentication provider, or AI key to get started.
 
+## Hackathon demo flow
+
+The web app is now a shared, interactive demo rather than a set of disconnected mock screens:
+
+1. Open the app in two browser windows. Use the **PLAYING AS** bar to choose Zuri in one and Ben in the other.
+2. As Zuri, open **Quests**, press `+`, choose **Challenge**, describe a societal-impact goal, and press **DESIGN + PRICE WITH GROK**.
+3. With `XAI_API_KEY` configured, Grok reasons about safety, impact, verification, and a fair play-money stake. Generate a Grok Imagine mission card and play the Grok Voice briefing, then send the challenge.
+4. In Ben's window, the challenge appears within three seconds. Accept it, resolve it, and watch both users' shared state and credit update.
+5. Open **Bet**, place a real play-money prediction, or ask Grok to forecast sentiment and add 20 clearly labeled synthetic predictors to the live pool.
+
+Starter quests, friends, and identities are intentionally seeded. Challenge decisions, escrow, shared quest state, prediction bets, balances, and crowd simulation run through the API. In-memory state resets when the service restarts.
+
+## Grok integration
+
+All xAI calls are server-side; `XAI_API_KEY` is never included in the Expo bundle.
+
+- **Grok reasoning:** converts an open-ended need into a concise impact quest, verification plan, and effort-based virtual-credit stake using structured output.
+- **Grok Imagine:** generates a cinematic 16:9 visual for the mission with `grok-imagine-image-2.0` by default.
+- **Grok Voice:** produces an expressive spoken mission briefing with the `eve` voice by default.
+- **Grok crowd lab:** estimates calibrated synthetic sentiment, then drives labeled bot accounts through the real market and ledger services.
+
+Without an API key, reasoning and crowd forecasting use a visibly labeled deterministic fallback; Imagine and Voice explain that a key is needed instead of pretending to be live AI. Model and voice defaults can be overridden with the variables in `.env.example`.
+
+## Deploy one public link
+
+[`render.yaml`](render.yaml) defines a single Render web service that builds the PWA and serves it from the same Fastify process as the API. In Render, create a Blueprint from this repository, enter `XAI_API_KEY` when prompted, and deploy. Render will provide an HTTPS `*.onrender.com` URL suitable for the submission.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/alyssahui/sidequest)
+
+The same production setup can be tested locally:
+
+```bash
+corepack pnpm build:web
+SERVE_WEB=true PORT=3000 corepack pnpm --filter @sidequest/api start
+```
+
+Then open `http://localhost:3000`. The API remains available under `/v1/*` on the same origin.
+
 ## Quick start: web/PWA
 
 Prerequisites:
@@ -60,7 +98,7 @@ corepack pnpm --filter @sidequest/mobile ios
 corepack pnpm --filter @sidequest/mobile android
 ```
 
-Most screens currently use deterministic demo data, while the API exposes the working quest, challenge, location, ledger, prediction-market, and self-bounty domain flows. State is held in memory and resets when the API restarts.
+Starter content remains deterministic, while the interactive challenge, location, ledger, prediction-market, AI, and crowd flows use the API. State is held in memory and resets when the API restarts.
 
 ## Environment configuration
 
@@ -79,7 +117,10 @@ Useful variables:
 | `EXPO_PUBLIC_LOCATION_ROUTE`              | Selects a scripted route such as `route-craig-street-bakery` or `route-poor-signal`                                                    |
 | `EXPO_PUBLIC_MAPBOX_TOKEN`                | Optional future/native Mapbox adapter token; the web demo uses an unkeyed basemap                                                      |
 | `DATABASE_URL`                            | Reserved for PostgreSQL/PostGIS persistence                                                                                            |
-| `XAI_API_KEY`                             | Reserved for optional server-side Grok commentary; never expose it to the client                                                       |
+| `XAI_API_KEY`                             | Enables server-side Grok reasoning, Imagine, Voice, and synthetic-crowd forecasting; never expose it to the client                     |
+| `XAI_TEXT_MODEL`                          | Optional reasoning-model override; defaults to `grok-4.20-reasoning-latest`                                                            |
+| `XAI_IMAGE_MODEL`                         | Optional Imagine-model override; defaults to `grok-imagine-image-2.0`                                                                  |
+| `XAI_VOICE_ID`                            | Optional TTS voice override; defaults to `eve`                                                                                         |
 
 For a physical device, the phone and development computer must be on the same network, and the API must be reachable through the computer's firewall. `localhost` on a phone refers to the phone itself.
 

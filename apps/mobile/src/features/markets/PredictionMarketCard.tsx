@@ -30,7 +30,7 @@ type Props = {
   viewerId?: string;
   status?: MarketDto["status"];
   balance?: number;
-  onPlaced?: (outcome: MarketOutcome, amount: number) => void;
+  onPlaced?: (outcome: MarketOutcome, amount: number) => void | Promise<void>;
 };
 
 export function PredictionMarketCard({
@@ -45,6 +45,7 @@ export function PredictionMarketCard({
   const [outcome, setOutcome] = useState<MarketOutcome>("COMPLETE");
   const [amount, setAmount] = useState(25);
   const [receipt, setReceipt] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const bets = market?.bets ?? fallbackBets;
   const pools = market ? market.pools : poolTotals(bets);
   const marketStatus = market?.status ?? status ?? "OPEN";
@@ -58,7 +59,7 @@ export function PredictionMarketCard({
   );
   const closed = marketStatus !== "OPEN";
   const insufficient = amount > balance;
-  const disabled = closed || insufficient || selfBlocked;
+  const disabled = closed || insufficient || selfBlocked || submitting;
 
   const submitLabel = selfBlocked
     ? "YOU CANNOT PREDICT YOURSELF"
@@ -141,12 +142,22 @@ export function PredictionMarketCard({
         accessibilityState={{ disabled }}
         disabled={disabled}
         onPress={() => {
-          setReceipt(`${outcome} · ◉ ${amount} committed`);
-          onPlaced?.(outcome, amount);
+          setSubmitting(true);
+          setReceipt(null);
+          void Promise.resolve(onPlaced?.(outcome, amount))
+            .then(() => setReceipt(`${outcome} · ◉ ${amount} committed`))
+            .catch((error: unknown) =>
+              setReceipt(
+                `Could not place prediction: ${error instanceof Error ? error.message : "try again"}`,
+              ),
+            )
+            .finally(() => setSubmitting(false));
         }}
         style={[styles.submit, disabled && styles.disabled]}
       >
-        <Text style={styles.submitLabel}>{submitLabel}</Text>
+        <Text style={styles.submitLabel}>
+          {submitting ? "UPDATING LIVE POOL…" : submitLabel}
+        </Text>
       </Pressable>
       {receipt ? (
         <Text accessibilityRole="alert" style={styles.receipt}>

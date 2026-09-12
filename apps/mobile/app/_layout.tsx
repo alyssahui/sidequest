@@ -8,6 +8,7 @@ import { colors } from "@sidequest/ui/theme";
 
 import { CasinoChipBar } from "../src/features/shell/CasinoChipBar";
 import { PwaInstallPrompt } from "../src/features/shell/PwaInstallPrompt";
+import { DemoSessionProvider } from "../src/features/demo/DemoSession";
 
 export default function RootLayout() {
   return (
@@ -26,14 +27,16 @@ export default function RootLayout() {
         <SafeAreaView edges={["top"]} style={styles.top}>
           <CasinoChipBar />
         </SafeAreaView>
-        <View style={styles.body}>
-          <Stack
-            screenOptions={{
-              contentStyle: { backgroundColor: colors.canvas },
-              headerShown: false,
-            }}
-          />
-        </View>
+        <DemoSessionProvider>
+          <View style={styles.body}>
+            <Stack
+              screenOptions={{
+                contentStyle: { backgroundColor: colors.canvas },
+                headerShown: false,
+              }}
+            />
+          </View>
+        </DemoSessionProvider>
       </View>
       <PwaInstallPrompt />
     </>

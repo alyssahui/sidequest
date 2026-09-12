@@ -9,6 +9,7 @@ import {
   SelfBountyService,
   userAccount,
 } from "@sidequest/market-core";
+import type { GrokService } from "../grok/service";
 
 type Dependencies = {
   service: MarketService;
@@ -16,6 +17,7 @@ type Dependencies = {
   ledger: InMemoryLedger;
   memberships: PartyMembershipPort;
   demoMode: boolean;
+  grok?: GrokService;
 };
 
 function idempotencyKey(request: FastifyRequest): string {
@@ -44,7 +46,8 @@ export function registerMarketRoutes(
   app: FastifyInstance,
   dependencies: Dependencies,
 ) {
-  const { service, bounties, ledger, memberships, demoMode } = dependencies;
+  const { service, bounties, ledger, memberships, demoMode, grok } =
+    dependencies;
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof MarketError) {
@@ -177,6 +180,43 @@ export function registerMarketRoutes(
     const { marketId } = request.params as { marketId: string };
     return {
       market: await service.void(marketId, commandKey(request, demoMode)),
+    };
+  });
+
+  app.post("/v1/demo/markets/:marketId/simulate-crowd", async (request) => {
+    if (!demoMode)
+      throw new MarketError("INVALID_COMMAND", "Crowd simulation is disabled");
+    const { marketId } = request.params as { marketId: string };
+    const market = service.get(marketId);
+    const requested = Number((request.body as { count?: number })?.count ?? 16);
+    const count = Math.max(4, Math.min(30, Math.round(requested)));
+    const forecast = await grok?.forecastCrowd(market.prompt);
+    const completePercent = forecast?.completePercent ?? 62;
+    let added = 0;
+    for (let index = 1; index <= count; index++) {
+      const bettorId = `user-grok-crowd-${index}`;
+      if (service.get(marketId).bets.some((bet) => bet.bettorId === bettorId))
+        continue;
+      const outcome =
+        index * 100 <= completePercent * count ? "COMPLETE" : "FAIL";
+      await service.placeBet({
+        idempotencyKey: `grok-crowd:${marketId}:${index}`,
+        marketId,
+        bettorId,
+        outcome,
+        amount: 5 + (index % 4) * 5,
+      });
+      added++;
+    }
+    return {
+      market: service.get(marketId),
+      simulation: {
+        added,
+        completePercent,
+        rationale: forecast?.rationale ?? "Deterministic demo forecast.",
+        source: forecast?.source ?? "deterministic-fallback",
+        model: forecast?.model ?? "none",
+      },
     };
   });
 

@@ -33,6 +33,8 @@ export type ChallengeDraft = {
   locationLabel?: string;
   notes?: string;
   deadline: string;
+  /** Optional AI-assessed stake used by the interactive demo. */
+  stakeCoins?: number;
 };
 export type ChallengeAssessment = {
   title: string;

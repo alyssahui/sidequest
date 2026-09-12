@@ -33,6 +33,77 @@ describe("foundation API", () => {
     expect(response.json()).toMatchObject({ userId: "user-zuri", coins: 420 });
   });
 
+  it("lets two demo identities share a challenge", async () => {
+    const app = buildApp();
+    apps.push(app);
+    const sent = await app.inject({
+      method: "POST",
+      url: "/v1/challenges/custom",
+      headers: {
+        "idempotency-key": "shared-challenge-one",
+        "x-demo-user-id": "user-zuri",
+      },
+      payload: {
+        recipientUserId: "user-ben",
+        partyId: "party-demo",
+        task: "Audit one source of wasted water",
+        locationLabel: "Home",
+        deadline: "2099-09-12T18:00:00.000Z",
+        stakeCoins: 35,
+      },
+    });
+    expect(sent.statusCode).toBe(200);
+    expect(sent.json().stakeCoins).toBe(35);
+
+    const benView = await app.inject({
+      method: "GET",
+      url: "/v1/challenges",
+      headers: { "x-demo-user-id": "user-ben" },
+    });
+    expect(benView.json().incoming).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: sent.json().id, status: "PENDING" }),
+      ]),
+    );
+
+    const accepted = await app.inject({
+      method: "POST",
+      url: `/v1/challenges/${sent.json().id}/respond`,
+      headers: {
+        "idempotency-key": "shared-challenge-accept",
+        "x-demo-user-id": "user-ben",
+      },
+      payload: { accept: true, expectedVersion: sent.json().version },
+    });
+    expect(accepted.statusCode).toBe(200);
+    expect(accepted.json().status).toBe("ACCEPTED");
+  });
+
+  it("seeds live markets and can add a labeled synthetic crowd", async () => {
+    const app = buildApp();
+    apps.push(app);
+    const list = await app.inject({ method: "GET", url: "/v1/markets" });
+    expect(list.statusCode).toBe(200);
+    const market = list.json().markets[0];
+    expect(market.status).toBe("OPEN");
+
+    const crowd = await app.inject({
+      method: "POST",
+      url: `/v1/demo/markets/${market.id}/simulate-crowd`,
+      headers: {
+        "idempotency-key": "simulate-crowd-one",
+        "x-demo-user-id": "user-zuri",
+      },
+      payload: { count: 12 },
+    });
+    expect(crowd.statusCode).toBe(200);
+    expect(crowd.json().simulation).toMatchObject({
+      added: 12,
+      source: "deterministic-fallback",
+    });
+    expect(crowd.json().market.participantCount).toBe(12);
+  });
+
   it("opens a market and places an authenticated demo prediction idempotently", async () => {
     const app = buildApp();
     apps.push(app);

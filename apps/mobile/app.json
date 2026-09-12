@@ -40,8 +40,8 @@
       ]
     },
     "web": {
-      "output": "static",
-      "favicon": "./public/favicon.png"
+      "bundler": "metro",
+      "output": "static"
     }
   }
 }

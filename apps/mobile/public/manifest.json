@@ -1,15 +1,28 @@
 {
-  "name": "SideQuest",
+  "id": "/",
+  "name": "SideQuest \u2014 Real Life Multiplayer",
   "short_name": "SideQuest",
-  "description": "Turn real life into a multiplayer game with your friends.",
+  "description": "Turn real life into a multiplayer adventure with your friends.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "background_color": "#002F38",
   "theme_color": "#71272A",
-  "categories": ["games", "social", "lifestyle"],
+  "categories": ["social", "games", "lifestyle"],
   "icons": [
+    {
+      "src": "/icons/sidequest.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/sidequest-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
@@ -27,6 +40,23 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open map",
+      "short_name": "Map",
+      "url": "/map"
+    },
+    {
+      "name": "View quests",
+      "short_name": "Quests",
+      "url": "/quests"
+    },
+    {
+      "name": "Party feed",
+      "short_name": "Feed",
+      "url": "/feed"
     }
   ]
 }

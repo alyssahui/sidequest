@@ -309,15 +309,19 @@ changes, because the rest of the feature talks in coordinates and markers.
 The app builds as an installable PWA and the whole GPS flow works in a browser.
 
 ```bash
-corepack pnpm dev:api                       # API on :3000
-corepack pnpm --filter @sidequest/mobile exec expo export --platform web --output-dir dist-web
+corepack pnpm dev:api      # API on :3000
+corepack pnpm build:web    # expo export -> apps/mobile/dist, then Workbox
 ```
 
-`expo.web.output` is `"static"`, which is what makes `app/+html.tsx` apply; the
-manifest, service worker, and icons live in `apps/mobile/public/` because Expo
-stopped generating them in SDK 50. On web the API base URL defaults to a
-relative path so the app and API are same-origin and no CORS setup is needed —
-serve the export behind a host that proxies `/v1/*` to the API.
+`build:web` runs `expo export --platform web` and then `workbox generateSW`,
+which precaches the shell into `dist/sw.js`. `expo.web.output` is `"static"`,
+which is what makes `app/+html.tsx` apply; the manifest and icons live in
+`apps/mobile/public/`. Workbox's `navigateFallbackDenylist` keeps `/v1/*` out of
+the service worker entirely — a cached location reading is worse than none.
+
+On web the API base URL defaults to a relative path so the app and API are
+same-origin and no CORS setup is needed. Serve `apps/mobile/dist` behind a host
+that proxies `/v1/*` to the API.
 
 What works in a browser: foreground GPS through `expo-location`'s web
 implementation, the projected map, quest tracking, arrival verification,
@@ -331,6 +335,10 @@ plain HTTP does not, and the service worker will not register either. For phone
 testing use an HTTPS tunnel (`cloudflared tunnel --url http://localhost:8088`
 or `ngrok http 8088`), or run with
 `EXPO_PUBLIC_LOCATION_PROVIDER=SIMULATED`, which needs no permission at all.
+
+Icons are SVG-first with PNG companions. iOS ignores both the manifest and SVG
+icons when adding to the home screen, so the PNG `apple-touch-icon` is what
+gives the installed app a real icon rather than a screenshot of the page.
 
 ## Device testing
 

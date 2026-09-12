@@ -3,6 +3,7 @@ import Head from "expo-router/head";
 import { StatusBar } from "expo-status-bar";
 
 import { colors } from "@sidequest/ui/theme";
+import { PwaInstallPrompt } from "../src/features/shell/PwaInstallPrompt";
 
 export default function RootLayout() {
   return (
@@ -23,6 +24,7 @@ export default function RootLayout() {
           headerShown: false,
         }}
       />
+      <PwaInstallPrompt />
     </>
   );
 }

@@ -39,6 +39,7 @@ export function LocationMapScreen() {
   // Markers are built once against a fixed start so expiry countdowns are
   // stable for the length of the demo rather than resetting on every render.
   const demoStartedAt = useRef(Date.now()).current;
+
   const markers = useMemo(
     () => buildDemoQuestMarkers(demoStartedAt),
     [demoStartedAt],
@@ -51,7 +52,9 @@ export function LocationMapScreen() {
   );
   const [trackedMarkerId, setTrackedMarkerId] = useState<string | null>(null);
   const [startedDistance, setStartedDistance] = useState<number | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  // Null until mounted: the web build is prerendered, and a clock read during
+  // that render would not match the first client render.
+  const [now, setNow] = useState<number | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
@@ -68,6 +71,7 @@ export function LocationMapScreen() {
 
   // Drives the expiry countdowns without re-rendering the whole tree per frame.
   useEffect(() => {
+    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 10_000);
     return () => clearInterval(timer);
   }, []);
@@ -245,8 +249,11 @@ export function LocationMapScreen() {
 }
 
 const styles = StyleSheet.create({
-  mapWrap: { flex: 1, minHeight: 220 },
-  sheetScroll: { flexGrow: 0, maxHeight: "52%" },
+  // Both panes share the column by flex ratio. A percentage maxHeight here
+  // resolves against the parent independently of the map's flex basis, so the
+  // two could total more than the screen and the sheet would cover the map.
+  mapWrap: { flex: 5, minHeight: 160 },
+  sheetScroll: { flex: 4 },
   sheet: { gap: spacing.md, paddingBottom: spacing.md },
   rejectionTitle: {
     color: colors.brandDeep,

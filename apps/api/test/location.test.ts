@@ -259,6 +259,45 @@ describe("POST /v1/location/sessions", () => {
     expect(upgraded.mode).toBe("BACKGROUND");
   });
 
+  it("reuses the live session when the same quest is reopened", async () => {
+    const first = await startSession(harness, { questInstanceId: "quest-7" });
+    harness.clock.advance(5_000);
+    const second = await startSession(harness, { questInstanceId: "quest-7" });
+
+    // A reload must not stack a second session, or the player hits the cap for
+    // no reason they can see.
+    expect(second.id).toBe(first.id);
+    expect(second.expiresAt).toBe(first.expiresAt);
+
+    const sessions = await harness.app.inject({
+      method: "GET",
+      url: "/v1/location/sessions",
+    });
+    expect(sessions.json().sessions).toHaveLength(1);
+  });
+
+  it("reuses the live session for the same party", async () => {
+    const first = await startSession(harness, {
+      purpose: "PARTY_SESSION",
+      partyId: PARTY,
+      questInstanceId: undefined,
+    });
+    const second = await startSession(harness, {
+      purpose: "PARTY_SESSION",
+      partyId: PARTY,
+      questInstanceId: undefined,
+    });
+
+    expect(second.id).toBe(first.id);
+  });
+
+  it("still starts a separate session for a different quest", async () => {
+    const first = await startSession(harness, { questInstanceId: "quest-a" });
+    const second = await startSession(harness, { questInstanceId: "quest-b" });
+
+    expect(second.id).not.toBe(first.id);
+  });
+
   it("caps how many sessions one user can run at once", async () => {
     for (let index = 0; index < 3; index += 1) {
       await startSession(harness, { questInstanceId: `quest-${index}` });

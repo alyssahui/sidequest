@@ -19,7 +19,15 @@ export type QuestDetailSheetProps = {
   arrival: ArrivalEvaluation | null;
   /** Distance when tracking began, used for the progress bar. */
   startedDistanceMeters: number | null;
-  now: number;
+  /**
+   * Current time, or null before the component has mounted.
+   *
+   * The web build is prerendered to HTML, so any clock-derived text would
+   * differ between the server render and the first client render and trip a
+   * React hydration mismatch. Time-dependent labels are withheld until the
+   * client supplies a clock.
+   */
+  now: number | null;
   isTracking: boolean;
   onTrack: (marker: QuestMarker) => void;
   onStopTracking: () => void;
@@ -52,7 +60,7 @@ export function QuestDetailSheet({
   }
 
   const style = markerStyleFor(marker.kind);
-  const expired = Date.parse(marker.expiresAt) <= now;
+  const expired = now !== null && Date.parse(marker.expiresAt) <= now;
   const progress =
     arrival && startedDistanceMeters !== null
       ? arrivalProgress(arrival, startedDistanceMeters)
@@ -82,7 +90,7 @@ export function QuestDetailSheet({
         {" · "}
         {marker.verificationSummary}
         {" · "}
-        {formatTimeRemaining(marker.expiresAt, now)}
+        {now === null ? "…" : formatTimeRemaining(marker.expiresAt, now)}
         {marker.participantCount
           ? ` · ${marker.participantCount} in the party`
           : ""}

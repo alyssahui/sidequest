@@ -304,6 +304,34 @@ changes, because the rest of the feature talks in coordinates and markers.
 | `EXPO_PUBLIC_MAPBOX_TOKEN`      | unset                       | Enables the Mapbox surface       |
 | `DATABASE_URL`                  | unset                       | Enables PostGIS storage          |
 
+## Web and PWA
+
+The app builds as an installable PWA and the whole GPS flow works in a browser.
+
+```bash
+corepack pnpm dev:api                       # API on :3000
+corepack pnpm --filter @sidequest/mobile exec expo export --platform web --output-dir dist-web
+```
+
+`expo.web.output` is `"static"`, which is what makes `app/+html.tsx` apply; the
+manifest, service worker, and icons live in `apps/mobile/public/` because Expo
+stopped generating them in SDK 50. On web the API base URL defaults to a
+relative path so the app and API are same-origin and no CORS setup is needed —
+serve the export behind a host that proxies `/v1/*` to the API.
+
+What works in a browser: foreground GPS through `expo-location`'s web
+implementation, the projected map, quest tracking, arrival verification,
+presence, and the privacy controls. What does not: background location. There
+is no TaskManager on web, so `backgroundSupported` is false and the UI stops
+offering the background prompt.
+
+**The browser blocks geolocation outside a secure context.** `localhost` counts
+as secure, so desktop testing just works. A phone hitting a LAN address over
+plain HTTP does not, and the service worker will not register either. For phone
+testing use an HTTPS tunnel (`cloudflared tunnel --url http://localhost:8088`
+or `ngrok http 8088`), or run with
+`EXPO_PUBLIC_LOCATION_PROVIDER=SIMULATED`, which needs no permission at all.
+
 ## Device testing
 
 ### Expo Go is not sufficient

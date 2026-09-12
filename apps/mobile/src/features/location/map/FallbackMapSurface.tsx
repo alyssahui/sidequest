@@ -197,16 +197,25 @@ const styles = StyleSheet.create({
     minHeight: 280,
     overflow: "hidden",
   },
+  // Pinned low rather than centred: the middle of the map is where the player
+  // pin and the densest markers sit.
   center: {
     alignItems: "center",
-    bottom: 0,
+    bottom: spacing.lg,
     justifyContent: "center",
     left: 0,
     position: "absolute",
     right: 0,
-    top: 0,
   },
-  hint: { color: colors.surface, fontWeight: "700" },
+  hint: {
+    backgroundColor: "rgba(8, 46, 55, 0.82)",
+    borderRadius: radii.pill,
+    color: colors.surface,
+    fontWeight: "700",
+    overflow: "hidden",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   road: {
     backgroundColor: "#577178",
     height: 42,

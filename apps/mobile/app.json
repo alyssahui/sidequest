@@ -38,6 +38,10 @@
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./public/favicon.png"
     }
   }
 }

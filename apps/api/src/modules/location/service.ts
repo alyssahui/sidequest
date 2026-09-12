@@ -188,6 +188,24 @@ export class LocationService implements GpsEvidenceService {
       .map((session) => settleSession(session, now))
       .filter((session) => session.status === "ACTIVE");
 
+    // Reopening the same quest reuses its live session rather than stacking a
+    // second one. Without this, a reload or a crashed screen leaks a session
+    // until it expires and the player hits the cap for no reason they can see.
+    if (request.questInstanceId) {
+      const reusable = active.find(
+        (session) => session.questInstanceId === request.questInstanceId,
+      );
+      if (reusable) return reusable;
+    }
+    if (request.purpose === "PARTY_SESSION" && request.partyId) {
+      const reusable = active.find(
+        (session) =>
+          session.purpose === "PARTY_SESSION" &&
+          session.partyId === request.partyId,
+      );
+      if (reusable) return reusable;
+    }
+
     if (active.length >= this.#policy.session.maxSessionsPerUser) {
       throw new LocationServiceError(
         "INVALID_REQUEST",

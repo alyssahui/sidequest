@@ -23,6 +23,21 @@ export type LocationFeatureConfig = {
   watchDistanceIntervalMeters: number;
 };
 
+/**
+ * Base URL when none is configured.
+ *
+ * On web an absolute `http://localhost:3000` is a *different origin* from
+ * wherever the page is served, so every request fails CORS preflight. A
+ * relative base keeps the app same-origin, which is also how a deployed PWA is
+ * normally served (app and API behind one host). Native has no origin, so it
+ * still needs a real URL.
+ */
+function defaultApiUrl(): string {
+  const isWeb =
+    typeof document !== "undefined" && typeof window !== "undefined";
+  return isWeb ? "" : "http://localhost:3000";
+}
+
 const env = (key: string): string | undefined => {
   // Expo inlines EXPO_PUBLIC_* at build time, so this must be a static lookup
   // per key rather than a dynamic index into process.env.
@@ -37,7 +52,7 @@ export function readLocationConfig(
   const mapboxToken = env("EXPO_PUBLIC_MAPBOX_TOKEN") ?? null;
 
   return {
-    apiUrl: env("EXPO_PUBLIC_API_URL") ?? "http://localhost:3000",
+    apiUrl: env("EXPO_PUBLIC_API_URL") ?? defaultApiUrl(),
     // Defaulting to the simulator would hide a broken device path, and
     // defaulting to Expo would break CI and emulators without a mock location.
     // So: honour an explicit choice, otherwise use the real provider and let

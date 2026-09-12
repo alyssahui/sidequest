@@ -55,3 +55,7 @@ Copy `.env.example` to `.env` only when adding live services. The default app an
 Read `agents/README.md` and `agents/SHARED_CONTRACT.md` before branching. Feature-specific contracts should be added in separate files and exported as package subpaths where possible, keeping shared barrel files and app/API registration as small integration hotspots.
 
 The current map is a deterministic game-world placeholder. The location branch owns the native location provider and Mapbox adapter; the quest branch owns quest lifecycle/UI; the market branch owns the real ledger and prediction settlement.
+
+## Play-money predictions
+
+The market feature uses binary `COMPLETE`/`FAIL` pari-mutuel pools backed by an append-only, balanced ledger. It is a social game mechanic only: Coins cannot be purchased, transferred for value, or cashed out. See `apps/api/src/modules/markets/README.md` for API and quest-event integration.

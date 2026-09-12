@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@sidequest/contracts": "workspace:*",
+    "@sidequest/market-core": "workspace:*",
     "@sidequest/ui": "workspace:*",
     "expo": "~57.0.22",
     "expo-constants": "~57.0.18",

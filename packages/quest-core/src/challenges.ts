@@ -167,6 +167,10 @@ export class ChallengeService {
           expiresAt: input.expiresAt,
           progressPercent: 0,
           lastNotice: "Challenge delivered. Waiting for their call.",
+          locationLabel:
+            template.spawnRules.areas.find(
+              (area) => area && area !== "ANYWHERE",
+            ) ?? "n/a",
           version: 1,
         };
         await this.d.challenges.save(c);

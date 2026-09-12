@@ -35,6 +35,10 @@ describe("bet tab prediction surface", () => {
     expect(card).not.toContain("style={styles.card}");
     expect(card).toContain("Estimated total if correct");
     expect(card).toContain("no monetary value");
+    expect(card).toContain("YOUR POSITION");
+    expect(bet).toContain("YOUR POSITION");
+    expect(bet).toContain("viewerPosition");
+    expect(bet).toContain("current === market.id ? null : market.id");
   });
 
   it("blocks self-prediction and keeps self-bounty separate", () => {

@@ -233,7 +233,7 @@ export function buildApp() {
       {
         questInstanceId: "quest-ben-water-audit",
         participantUserId: "user-ben",
-        prompt: "Will Ben audit and fix one source of wasted water today?",
+        prompt: "Will Etash audit and fix one source of wasted water today?",
       },
       {
         questInstanceId: "quest-alyssa-teach",

@@ -116,7 +116,7 @@ describe("foundation API", () => {
         questInstanceId: "quest-api",
         participantUserId: "user-ben",
         partyId: "party-demo",
-        prompt: "Will Ben finish the quest?",
+        prompt: "Will Etash finish the quest?",
         opensAt: "2026-09-11T18:00:00.000Z",
         closesAt: "2099-09-11T19:00:00.000Z",
         questDeadline: "2099-09-11T20:00:00.000Z",

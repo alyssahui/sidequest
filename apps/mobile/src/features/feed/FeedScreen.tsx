@@ -19,7 +19,7 @@ export const demoFeed: FeedEvent[] = [
     type: "prediction.won",
     occurredAt: "2026-09-11T18:22:00.000Z",
     actorDisplayName: "Alyssa",
-    title: "won a prediction on Ben",
+    title: "won a prediction on Etash",
     detail: "COMPLETE pool paid out.",
     coinDelta: 35,
   },

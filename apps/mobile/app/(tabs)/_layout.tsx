@@ -13,11 +13,20 @@ const icons: Record<RootTab, string> = {
 };
 
 const iconScale: Record<RootTab, number> = {
-  map: 20,
-  quests: 14,
-  party: 19,
+  map: 23,
+  quests: 18,
+  party: 23,
   bet: 16,
   profile: 15,
+};
+
+/** ◆ sits high in the em box; push it down onto the shared icon line. */
+const iconShift: Record<RootTab, number> = {
+  map: 0,
+  quests: 4,
+  party: 0,
+  bet: 0,
+  profile: 0,
 };
 
 export default function TabLayout() {
@@ -35,15 +44,22 @@ export default function TabLayout() {
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "800" },
+        tabBarIconStyle: { marginBottom: 0 },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: "800",
+          marginTop: 2,
+        },
         tabBarIcon: ({ color }) => {
           const name = route.name as RootTab;
+          const size = iconScale[name] ?? 16;
           return (
             <View
               style={{
                 alignItems: "center",
                 height: 24,
-                justifyContent: "center",
+                justifyContent: "flex-end",
+                overflow: "visible",
                 width: 24,
               }}
             >
@@ -51,8 +67,10 @@ export default function TabLayout() {
                 accessibilityElementsHidden
                 style={{
                   color,
-                  fontSize: iconScale[name] ?? 16,
-                  lineHeight: 24,
+                  fontSize: size,
+                  includeFontPadding: false,
+                  lineHeight: size,
+                  marginTop: iconShift[name],
                   textAlign: "center",
                 }}
               >

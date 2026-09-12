@@ -14,14 +14,14 @@ export type ComposedChallenge = {
   progress: number;
   explanation: string;
 };
-const players = ["Ben", "Alyssa"];
+const players = ["Etash", "Alyssa"];
 
 export function ChallengeComposer({
   onSend,
 }: {
   onSend: (challenge: ComposedChallenge) => void;
 }) {
-  const [recipient, setRecipient] = useState("Ben");
+  const [recipient, setRecipient] = useState("Etash");
   const [task, setTask] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");

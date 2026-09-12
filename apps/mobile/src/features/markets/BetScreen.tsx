@@ -7,7 +7,7 @@ import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 
 import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import { ScreenFrame } from "../shell/ScreenFrame";
-import { PredictionMarketCard } from "./PredictionMarketCard";
+import { PredictionMarketCard, SelfBountyCard } from "./PredictionMarketCard";
 
 type CrowdResult = {
   added: number;
@@ -20,10 +20,22 @@ type CrowdResult = {
 const nameFor = (id: string) =>
   DEMO_USERS.find((user) => user.id === id)?.name ?? "A party member";
 
+function viewerPosition(market: MarketDto, viewerId: string) {
+  const mine = market.bets.filter((bet) => bet.bettorId === viewerId);
+  if (!mine.length) return null;
+  const complete = mine
+    .filter((bet) => bet.outcome === "COMPLETE")
+    .reduce((sum, bet) => sum + bet.amount, 0);
+  const fail = mine
+    .filter((bet) => bet.outcome === "FAIL")
+    .reduce((sum, bet) => sum + bet.amount, 0);
+  return { complete, fail };
+}
+
 export function BetScreen() {
   const { request, user } = useDemoSession();
   const [markets, setMarkets] = useState<MarketDto[]>([]);
-  const [selectedId, setSelectedId] = useState<string>();
+  const [selectedId, setSelectedId] = useState<string | null>();
   const [balance, setBalance] = useState(0);
   const [message, setMessage] = useState(
     "Connecting to the shared party pool…",
@@ -39,7 +51,9 @@ export function BetScreen() {
       ]);
       setMarkets(marketResult.markets);
       setBalance(economy.balance);
-      setSelectedId((current) => current ?? marketResult.markets[0]?.id);
+      setSelectedId((current) =>
+        current === undefined ? (marketResult.markets[0]?.id ?? null) : current,
+      );
       setMessage("Live · refreshes every 3 seconds");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "API unavailable");
@@ -53,14 +67,17 @@ export function BetScreen() {
   }, [refresh]);
 
   const selected = useMemo(
-    () => markets.find((market) => market.id === selectedId) ?? markets[0],
+    () => markets.find((market) => market.id === selectedId),
     [markets, selectedId],
   );
 
-  async function place(outcome: MarketOutcome, amount: number) {
-    if (!selected) return;
+  async function place(
+    marketId: string,
+    outcome: MarketOutcome,
+    amount: number,
+  ) {
     const result = await request<{ market: MarketDto }>(
-      `/v1/markets/${selected.id}/bets`,
+      `/v1/markets/${marketId}/bets`,
       {
         method: "POST",
         headers: { "idempotency-key": `web-bet-${user.id}-${Date.now()}` },
@@ -73,6 +90,7 @@ export function BetScreen() {
       ),
     );
     setBalance((current) => current - amount);
+    setSelectedId(marketId);
   }
 
   async function simulateCrowd() {
@@ -110,7 +128,10 @@ export function BetScreen() {
         virtual, cannot be purchased, and has no monetary value. Pools are
         pari-mutuel COMPLETE / FAIL—not odds or an order book.
       </Text>
-      <View style={styles.balanceRow}>
+      <View
+        accessibilityLabel={`${balance} credit available`}
+        style={styles.balanceRow}
+      >
         <View>
           <Text style={styles.balanceLabel}>YOUR CREDIT</Text>
           <Text style={styles.sync}>{message}</Text>
@@ -122,9 +143,13 @@ export function BetScreen() {
         <MarketRow
           key={market.id}
           market={market}
+          position={viewerPosition(market, user.id)}
           selected={market.id === selected?.id}
+          self={market.participantUserId === user.id}
           onSelect={() => {
-            setSelectedId(market.id);
+            setSelectedId((current) =>
+              current === market.id ? null : market.id,
+            );
             setCrowd(null);
           }}
         />
@@ -132,7 +157,7 @@ export function BetScreen() {
 
       {selected ? (
         <>
-          <HudCard style={styles.grokCard}>
+          <HudCard>
             <StatusPill label="GROK CROWD LAB" />
             <Text style={styles.grokTitle}>Stress-test this market</Text>
             <Text style={styles.meta}>
@@ -157,32 +182,40 @@ export function BetScreen() {
               </Text>
             ) : null}
           </HudCard>
+          <MarketTimeline market={selected} />
           <PredictionMarketCard
             key={`${selected.id}-${user.id}`}
             balance={balance}
             closesLabel="Closes with the quest deadline"
             market={selected}
-            onPlaced={(outcome, amount) => place(outcome, amount)}
+            onPlaced={(outcome, amount) => place(selected.id, outcome, amount)}
             participantName={nameFor(selected.participantUserId)}
             viewerId={user.id}
           />
         </>
-      ) : (
-        <HudCard>
-          <Text style={styles.empty}>No live markets yet.</Text>
+      ) : markets.length === 0 ? (
+        <HudCard accessibilityLabel="No open party markets">
+          <Text style={styles.empty}>
+            No party markets yet. Markets open when a friend accepts a quest.
+          </Text>
         </HudCard>
-      )}
+      ) : null}
+      <SelfBountyCard balance={balance} />
     </ScreenFrame>
   );
 }
 
 function MarketRow({
   market,
+  position,
   selected,
+  self,
   onSelect,
 }: {
   market: MarketDto;
+  position: { complete: number; fail: number } | null;
   selected: boolean;
+  self: boolean;
   onSelect: () => void;
 }) {
   const total = market.pools.COMPLETE + market.pools.FAIL;
@@ -193,8 +226,9 @@ function MarketRow({
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onSelect}
+      style={selected ? styles.selectedWrap : undefined}
     >
-      <HudCard>
+      <HudCard style={selected ? styles.selectedCard : undefined}>
         <View style={styles.row}>
           <StatusPill label={market.status} />
           <Text style={styles.meta}>{market.participantCount} predictors</Text>
@@ -209,8 +243,51 @@ function MarketRow({
           </Text>
           <Text style={styles.poolStat}>FAIL ◉ {market.pools.FAIL}</Text>
         </View>
+        {self ? (
+          <Text style={styles.meta}>YOU CANNOT PREDICT YOURSELF</Text>
+        ) : position ? (
+          <Text style={styles.position}>
+            YOUR POSITION
+            {position.complete ? ` · COMPLETE ◉ ${position.complete}` : ""}
+            {position.fail ? ` · FAIL ◉ ${position.fail}` : ""}
+          </Text>
+        ) : market.status === "OPEN" ? (
+          <Text style={styles.meta}>Open · tap to predict</Text>
+        ) : null}
       </HudCard>
     </Pressable>
+  );
+}
+
+function MarketTimeline({ market }: { market: MarketDto }) {
+  const steps = [
+    { id: "OPEN", label: "OPEN", done: true },
+    {
+      id: "CLOSED",
+      label: "CLOSES",
+      done: market.status !== "OPEN",
+    },
+    {
+      id: "SETTLED",
+      label: market.status === "VOID" ? "VOID" : "SETTLED",
+      done: market.status === "SETTLED" || market.status === "VOID",
+    },
+  ];
+  return (
+    <HudCard accessibilityLabel="Market resolution timeline">
+      <Text style={styles.timelineTitle}>RESOLUTION</Text>
+      <View style={styles.timeline}>
+        {steps.map((step) => (
+          <View key={step.id} style={styles.timelineStep}>
+            <View style={[styles.dot, step.done && styles.dotDone]} />
+            <Text style={styles.timelineLabel}>{step.label}</Text>
+          </View>
+        ))}
+      </View>
+      {market.outcome ? (
+        <Text style={styles.meta}>Resolved {market.outcome}.</Text>
+      ) : null}
+    </HudCard>
   );
 }
 
@@ -258,8 +335,21 @@ const styles = StyleSheet.create({
   },
   barFill: { backgroundColor: colors.brandDeep, height: 10 },
   poolStat: { color: colors.ink, fontSize: 11, fontWeight: "800" },
+  position: {
+    color: colors.brandDeep,
+    fontSize: 12,
+    fontWeight: "900",
+    marginTop: spacing.sm,
+  },
+  selectedWrap: {
+    marginHorizontal: -spacing.sm,
+    marginVertical: spacing.xs,
+    zIndex: 1,
+  },
+  selectedCard: {
+    padding: spacing.lg,
+  },
   empty: { color: colors.ink, fontWeight: "700" },
-  grokCard: { borderColor: colors.warning, borderWidth: 2 },
   grokTitle: {
     color: colors.ink,
     fontSize: 18,
@@ -288,5 +378,30 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     lineHeight: 18,
     marginTop: spacing.md,
+  },
+  timelineTitle: {
+    color: colors.ink,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  timeline: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing.md,
+  },
+  timelineStep: { alignItems: "center", flex: 1 },
+  dot: {
+    backgroundColor: colors.outline,
+    borderRadius: radii.pill,
+    height: 12,
+    width: 12,
+  },
+  dotDone: { backgroundColor: colors.brandDeep },
+  timelineLabel: {
+    color: colors.ink,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: spacing.xs,
   },
 });

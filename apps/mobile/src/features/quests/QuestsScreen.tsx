@@ -1,22 +1,24 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 import type { Challenge } from "@sidequest/contracts";
-import { colors, radii } from "@sidequest/ui/theme";
+import { colors, radii, spacing } from "@sidequest/ui/theme";
 
 import { DEMO_USERS, useDemoSession } from "../demo/DemoSession";
 import { ScreenFrame } from "../shell/ScreenFrame";
 import { AddTaskOverlay } from "./AddTaskOverlay";
-import { demoQuests, type QuestItem } from "./demoData";
+import {
+  actorFor,
+  demoQuests,
+  questsForViewer,
+  type QuestItem,
+} from "./demoData";
 import { useNow } from "./dueAt";
 import { QuestDetailOverlay } from "./QuestDetailOverlay";
 import { QuestRow } from "./QuestRow";
 
-const person = (id: string) =>
-  DEMO_USERS.find((user) => user.id === id)?.name ?? "Party member";
-
-function toItem(challenge: Challenge, viewerId: string): QuestItem {
-  const incoming = challenge.recipientUserId === viewerId;
+function toItem(challenge: Challenge): QuestItem {
+  const issuer = actorFor(challenge.issuerUserId);
   const status =
     challenge.status === "PENDING"
       ? "PENDING"
@@ -29,16 +31,17 @@ function toItem(challenge: Challenge, viewerId: string): QuestItem {
     id: challenge.id,
     kind: "CHALLENGE",
     status,
-    attention: incoming && challenge.status === "PENDING",
-    direction: incoming ? "INCOMING" : "OUTGOING",
+    attention: false,
+    direction: "INCOMING",
     escrowHeld: ["PENDING", "ACCEPTED"].includes(challenge.status),
     title: challenge.title,
-    location: "Community mission",
-    person: person(
-      incoming ? challenge.issuerUserId : challenge.recipientUserId,
-    ),
-    description:
-      `${challenge.description} ${challenge.lastNotice ?? ""}`.trim(),
+    location: challenge.locationLabel?.trim() || "n/a",
+    person: actorFor(challenge.recipientUserId).name,
+    creatorUserId: challenge.issuerUserId,
+    recipientUserId: challenge.recipientUserId,
+    creatorName: issuer.name,
+    creatorAvatar: issuer.avatar,
+    description: challenge.description.trim(),
     dueAt: challenge.expiresAt,
     stake: challenge.stakeCoins,
     serverVersion: challenge.version,
@@ -54,9 +57,18 @@ export function QuestsScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [sync, setSync] = useState("Connecting…");
+  const localCreditDelta = useRef(0);
   const quests = useMemo(
-    () => [...sharedQuests, ...localQuests],
-    [localQuests, sharedQuests],
+    () => questsForViewer([...localQuests, ...sharedQuests], user.id),
+    [localQuests, sharedQuests, user.id],
+  );
+  const activeQuests = useMemo(
+    () => quests.filter((quest) => quest.direction !== "OUTGOING"),
+    [quests],
+  );
+  const placedQuests = useMemo(
+    () => quests.filter((quest) => quest.direction === "OUTGOING"),
+    [quests],
   );
   const selected = quests.find((quest) => quest.id === selectedId);
 
@@ -69,11 +81,9 @@ export function QuestsScreen() {
         request<{ balance: number }>("/v1/economy/me"),
       ]);
       setSharedQuests(
-        [...challengeResult.incoming, ...challengeResult.outgoing].map(
-          (challenge) => toItem(challenge, user.id),
-        ),
+        [...challengeResult.incoming, ...challengeResult.outgoing].map(toItem),
       );
-      setBalance(economy.balance);
+      setBalance(Math.max(0, economy.balance + localCreditDelta.current));
       setSync("Shared with your party · refreshes every 3 seconds");
     } catch (error) {
       setSync(error instanceof Error ? error.message : "API unavailable");
@@ -82,6 +92,7 @@ export function QuestsScreen() {
 
   useEffect(() => {
     setSelectedId(null);
+    localCreditDelta.current = 0;
     void refresh();
     const timer = setInterval(() => void refresh(), 3_000);
     return () => clearInterval(timer);
@@ -96,7 +107,6 @@ export function QuestsScreen() {
     if (!selected.serverVersion) {
       if (accept) {
         if (selected.stake > balance) return;
-        setBalance((current) => current - selected.stake);
         setLocalQuests((current) =>
           current.map((quest) =>
             quest.id === selected.id
@@ -134,6 +144,7 @@ export function QuestsScreen() {
     )
       return;
     setBalance((current) => current + selected.stake);
+    localCreditDelta.current += selected.stake;
     setLocalQuests((current) =>
       current.map((quest) =>
         quest.id === selected.id
@@ -167,6 +178,7 @@ export function QuestsScreen() {
     )
       return;
     setBalance((current) => Math.max(0, current - selected.stake));
+    localCreditDelta.current -= selected.stake;
     setLocalQuests((current) =>
       current.map((quest) =>
         quest.id === selected.id
@@ -178,6 +190,7 @@ export function QuestsScreen() {
   }
 
   async function create(quest: QuestItem) {
+    if (quest.stake > balance) return;
     if (quest.kind === "CHALLENGE") {
       const recipient = DEMO_USERS.find(
         (candidate) => candidate.name === quest.person,
@@ -220,7 +233,7 @@ export function QuestsScreen() {
     >
       <Text style={styles.balance}>YOUR CREDIT · ◉ {balance}</Text>
       <Text style={styles.sync}>{sync}</Text>
-      {quests.map((quest) => (
+      {activeQuests.map((quest) => (
         <QuestRow
           key={quest.id}
           now={now}
@@ -228,6 +241,23 @@ export function QuestsScreen() {
           quest={quest}
         />
       ))}
+      <Text accessibilityRole="header" style={styles.placed}>
+        Placed by you
+      </Text>
+      {placedQuests.length ? (
+        placedQuests.map((quest) => (
+          <QuestRow
+            key={quest.id}
+            now={now}
+            onPress={() => setSelectedId(quest.id)}
+            quest={quest}
+          />
+        ))
+      ) : (
+        <Text style={styles.placedEmpty}>
+          Challenges you send to friends land here.
+        </Text>
+      )}
       {selected ? (
         <QuestDetailOverlay
           balance={balance}
@@ -274,4 +304,13 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   sync: { color: colors.brand, fontSize: 10, marginTop: -6 },
+  placed: {
+    color: colors.brand,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.6,
+    marginTop: spacing.sm,
+    textTransform: "uppercase",
+  },
+  placedEmpty: { color: colors.surface, fontSize: 13 },
 });

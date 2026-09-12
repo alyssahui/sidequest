@@ -4,7 +4,7 @@ import { colors, radii, spacing, strokes } from "@sidequest/ui/theme";
 
 import type { QuestItem } from "./demoData";
 import { formatTimeLeft } from "./dueAt";
-import { LocationPinIcon, PersonIcon } from "./MetaIcons";
+import { LocationPinIcon } from "./MetaIcons";
 
 export function QuestRow({
   quest,
@@ -18,10 +18,14 @@ export function QuestRow({
   const red = quest.kind !== "OWN";
   const timeLeft = now === null ? "…" : formatTimeLeft(quest.dueAt, now);
   const expired = timeLeft === "expired";
+  const listedLabel =
+    quest.direction === "OUTGOING" && quest.kind === "CHALLENGE"
+      ? `Challenging ${quest.creatorName}`
+      : `Created by ${quest.creatorName}`;
   return (
     <Pressable
       accessibilityHint="Opens quest details"
-      accessibilityLabel={`${quest.title}. ${expired ? "Expired" : `${timeLeft} left`}. ${quest.location}. ${quest.person}.${quest.attention ? " Needs a decision." : ""}`}
+      accessibilityLabel={`${quest.title}. ${expired ? "Expired" : `${timeLeft} left`}. ${quest.location}. ${listedLabel}.${quest.attention ? " Needs a decision." : ""}`}
       accessibilityRole="button"
       onPress={onPress}
     >
@@ -44,9 +48,16 @@ export function QuestRow({
           </Text>
         </View>
         <View style={styles.metaRow}>
-          <PersonIcon color={red ? colors.inkInverse : colors.ink} />
+          <View
+            accessibilityLabel={listedLabel}
+            style={[styles.avatar, red && styles.avatarRed]}
+          >
+            <Text style={[styles.avatarText, red && styles.avatarTextRed]}>
+              {quest.creatorAvatar}
+            </Text>
+          </View>
           <Text style={[styles.meta, red && styles.redText]}>
-            {quest.person}
+            {quest.creatorName}
           </Text>
         </View>
         {quest.description ? (
@@ -117,6 +128,21 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
   },
+  avatar: {
+    alignItems: "center",
+    backgroundColor: colors.brandDeep,
+    borderRadius: radii.pill,
+    height: 18,
+    justifyContent: "center",
+    width: 18,
+  },
+  avatarRed: { backgroundColor: colors.surface },
+  avatarText: {
+    color: colors.inkInverse,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  avatarTextRed: { color: colors.brandDeep },
   description: {
     color: colors.muted,
     fontSize: 13,

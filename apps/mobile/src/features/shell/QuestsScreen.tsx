@@ -28,7 +28,7 @@ export function QuestsScreen() {
       </HudCard>
       <SelfBountyCard />
       <PredictionMarketCard
-        participantName="Ben"
+        participantName="Etash"
         closesLabel="47 minutes remaining"
       />
       <StatusPill label="NEARBY · 3" />

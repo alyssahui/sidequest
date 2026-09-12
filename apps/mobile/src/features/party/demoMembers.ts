@@ -38,8 +38,8 @@ export const demoMembers: PartyMember[] = [
   },
   {
     id: "ben",
-    name: "Ben",
-    avatar: "B",
+    name: "Etash",
+    avatar: "E",
     status: "Location paused",
     credit: 290,
     self: false,

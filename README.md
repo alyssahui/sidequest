@@ -8,10 +8,10 @@ SideQuest is an Expo/React Native app that runs on iOS, Android, and the web as 
 
 The web app is now a shared, interactive demo rather than a set of disconnected mock screens:
 
-1. Open the app in two browser windows. Use the **PLAYING AS** bar to choose Zuri in one and Ben in the other.
+1. Open the app in two browser windows. Use the **PLAYING AS** bar to choose Zuri in one and Etash in the other.
 2. As Zuri, open **Quests**, press `+`, choose **Challenge**, describe a societal-impact goal, and press **DESIGN + PRICE WITH GROK**.
 3. With `XAI_API_KEY` configured, Grok reasons about safety, impact, verification, and a fair play-money stake. Generate a Grok Imagine mission card and play the Grok Voice briefing, then send the challenge.
-4. In Ben's window, the challenge appears within three seconds. Accept it, resolve it, and watch both users' shared state and credit update.
+4. In Etash's window, the challenge appears within three seconds. Accept it, resolve it, and watch both users' shared state and credit update.
 5. Open **Bet**, place a real play-money prediction, or ask Grok to forecast sentiment and add 20 clearly labeled synthetic predictors to the live pool.
 
 Starter quests, friends, and identities are intentionally seeded. Challenge decisions, escrow, shared quest state, prediction bets, balances, and crowd simulation run through the API. In-memory state resets when the service restarts.

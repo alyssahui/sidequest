@@ -24,6 +24,7 @@ export type Challenge = {
   resolvedAt?: string;
   progressPercent: number;
   lastNotice?: string;
+  locationLabel?: string;
   version: number;
 };
 export type ChallengeDraft = {

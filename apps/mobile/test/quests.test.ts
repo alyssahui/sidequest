@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
+import { demoQuests, questsForViewer } from "../src/features/quests/demoData";
+
 const screen = readFileSync(
   new URL("../src/features/quests/QuestsScreen.tsx", import.meta.url),
   "utf8",
@@ -55,6 +57,11 @@ describe("quest PWA surface", () => {
     expect(row).toContain("quest.description ?");
     expect(screen).toContain("current + selected.stake");
     expect(screen).toContain("current - selected.stake");
+    expect(screen).toContain("Placed by you");
+    expect(screen).toContain('direction === "OUTGOING"');
+    expect(screen).toContain("questsForViewer");
+    expect(add).toContain("creatorUserId: user.id");
+    expect(add).toContain("recipientUserId: recipient.id");
   });
 
   it("color-codes own tasks yellow and challenges/system quests red", () => {
@@ -64,7 +71,10 @@ describe("quest PWA surface", () => {
     expect(row).toContain("brandDeepStroke");
     expect(row).toContain("strokes.card");
     expect(row).toContain("LocationPinIcon");
-    expect(row).toContain("PersonIcon");
+    expect(row).toContain("creatorAvatar");
+    expect(row).toContain("Created by");
+    expect(row).toContain("Challenging");
+    expect(row).not.toContain("PersonIcon");
     expect(row).toContain("formatTimeLeft");
     expect(row).toContain("dueAt");
     expect(overlay).toContain("formatTimeLeft");
@@ -95,4 +105,48 @@ describe("quest PWA surface", () => {
     "keeps quest briefing detail %s",
     (label) => expect(briefing).toContain(label),
   );
+});
+
+describe("quest viewer projection", () => {
+  it("shows Etash's challenge to Zuri as incoming with Etash as creator", () => {
+    const zuri = questsForViewer(demoQuests, "user-zuri");
+    const incoming = zuri.find((quest) => quest.id === "challenge-ben");
+    expect(incoming).toMatchObject({
+      direction: "INCOMING",
+      creatorName: "Etash",
+      creatorAvatar: "E",
+      person: "Etash",
+      attention: true,
+    });
+    expect(zuri.some((quest) => quest.id === "own-wean")).toBe(true);
+    expect(zuri.some((quest) => quest.direction === "OUTGOING")).toBe(false);
+    expect(zuri.some((quest) => quest.id === "own-ben-faucet")).toBe(false);
+  });
+
+  it("puts that same challenge in Etash's Placed list named for Zuri", () => {
+    const ben = questsForViewer(demoQuests, "user-ben");
+    const placed = ben.filter((quest) => quest.direction === "OUTGOING");
+    const active = ben.filter((quest) => quest.direction !== "OUTGOING");
+    expect(placed).toEqual([
+      expect.objectContaining({
+        id: "challenge-ben",
+        creatorName: "Zuri",
+        creatorAvatar: "Z",
+        person: "Zuri",
+        attention: false,
+      }),
+    ]);
+    expect(active.map((quest) => quest.id)).toEqual(["own-ben-faucet"]);
+    expect(active[0]?.creatorName).toBe("You");
+  });
+
+  it("hides other people's tasks from Alyssa", () => {
+    const alyssa = questsForViewer(demoQuests, "user-alyssa");
+    expect(alyssa.map((quest) => quest.id)).toEqual(["own-alyssa-kit"]);
+    expect(alyssa[0]).toMatchObject({
+      direction: "SELF",
+      creatorName: "You",
+      creatorAvatar: "A",
+    });
+  });
 });

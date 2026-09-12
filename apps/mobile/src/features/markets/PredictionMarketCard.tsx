@@ -53,12 +53,23 @@ export function PredictionMarketCard({
     Boolean(viewerId) &&
     Boolean(market?.participantUserId) &&
     viewerId === market?.participantUserId;
+  const myBets = viewerId
+    ? bets.filter((bet) => bet.bettorId === viewerId)
+    : [];
+  const myComplete = myBets
+    .filter((bet) => bet.outcome === "COMPLETE")
+    .reduce((sum, bet) => sum + bet.amount, 0);
+  const myFail = myBets
+    .filter((bet) => bet.outcome === "FAIL")
+    .reduce((sum, bet) => sum + bet.amount, 0);
+  const placed = myBets.length > 0;
   const estimate = useMemo(
     () => estimatedPayout(bets, outcome, amount),
     [amount, bets, outcome],
   );
   const closed = marketStatus !== "OPEN";
   const insufficient = amount > balance;
+  const showForm = !placed && !selfBlocked && !closed;
   const disabled = closed || insufficient || selfBlocked || submitting;
 
   const submitLabel = selfBlocked
@@ -82,81 +93,97 @@ export function PredictionMarketCard({
         {closesLabel} · Virtual credit has no monetary value.
       </Text>
 
-      <View accessibilityRole="radiogroup" style={styles.outcomes}>
-        {(["COMPLETE", "FAIL"] as const).map((choice) => (
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ checked: outcome === choice }}
-            key={choice}
-            onPress={() => {
-              setOutcome(choice);
-              setReceipt(null);
-            }}
-            style={[
-              styles.outcome,
-              outcome === choice && styles.outcomeSelected,
-            ]}
-          >
-            <Text style={styles.outcomeLabel}>
-              {choice === "COMPLETE" ? "✓ COMPLETE" : "× FAIL"}
-            </Text>
-            <Text style={styles.pool}>◉ {pools[choice]} in pool</Text>
-          </Pressable>
-        ))}
-      </View>
+      {placed ? (
+        <Text accessibilityRole="alert" style={styles.position}>
+          YOUR POSITION
+          {myComplete ? ` · COMPLETE ◉ ${myComplete}` : ""}
+          {myFail ? ` · FAIL ◉ ${myFail}` : ""}
+        </Text>
+      ) : null}
 
-      <Text style={styles.label}>YOUR PICK</Text>
-      <View style={styles.stakes}>
-        {[10, 25, 50].map((stake) => (
+      {selfBlocked && !placed ? (
+        <Text style={styles.receipt}>YOU CANNOT PREDICT YOURSELF</Text>
+      ) : null}
+
+      {showForm ? (
+        <>
+          <View accessibilityRole="radiogroup" style={styles.outcomes}>
+            {(["COMPLETE", "FAIL"] as const).map((choice) => (
+              <Pressable
+                accessibilityRole="radio"
+                accessibilityState={{ checked: outcome === choice }}
+                key={choice}
+                onPress={() => {
+                  setOutcome(choice);
+                  setReceipt(null);
+                }}
+                style={[
+                  styles.outcome,
+                  outcome === choice && styles.outcomeSelected,
+                ]}
+              >
+                <Text style={styles.outcomeLabel}>
+                  {choice === "COMPLETE" ? "✓ COMPLETE" : "× FAIL"}
+                </Text>
+                <Text style={styles.pool}>◉ {pools[choice]} in pool</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>YOUR PICK</Text>
+          <View style={styles.stakes}>
+            {[10, 25, 50].map((stake) => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: amount === stake }}
+                key={stake}
+                onPress={() => {
+                  setAmount(stake);
+                  setReceipt(null);
+                }}
+                style={[styles.stake, amount === stake && styles.stakeSelected]}
+              >
+                <Text
+                  style={[
+                    styles.stakeLabel,
+                    amount === stake && styles.stakeLabelSelected,
+                  ]}
+                >
+                  ◉ {stake}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Text style={styles.estimate}>
+            Estimated total if correct: ◉ {estimate}. Later predictions can
+            change this number.
+          </Text>
+
           <Pressable
             accessibilityRole="button"
-            accessibilityState={{ selected: amount === stake }}
-            key={stake}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
             onPress={() => {
-              setAmount(stake);
+              setSubmitting(true);
               setReceipt(null);
+              void Promise.resolve(onPlaced?.(outcome, amount))
+                .then(() => setReceipt(`${outcome} · ◉ ${amount} committed`))
+                .catch((error: unknown) =>
+                  setReceipt(
+                    `Could not place prediction: ${error instanceof Error ? error.message : "try again"}`,
+                  ),
+                )
+                .finally(() => setSubmitting(false));
             }}
-            style={[styles.stake, amount === stake && styles.stakeSelected]}
+            style={[styles.submit, disabled && styles.disabled]}
           >
-            <Text
-              style={[
-                styles.stakeLabel,
-                amount === stake && styles.stakeLabelSelected,
-              ]}
-            >
-              ◉ {stake}
+            <Text style={styles.submitLabel}>
+              {submitting ? "UPDATING LIVE POOL…" : submitLabel}
             </Text>
           </Pressable>
-        ))}
-      </View>
-      <Text style={styles.estimate}>
-        Estimated total if correct: ◉ {estimate}. Later predictions can change
-        this number.
-      </Text>
-
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ disabled }}
-        disabled={disabled}
-        onPress={() => {
-          setSubmitting(true);
-          setReceipt(null);
-          void Promise.resolve(onPlaced?.(outcome, amount))
-            .then(() => setReceipt(`${outcome} · ◉ ${amount} committed`))
-            .catch((error: unknown) =>
-              setReceipt(
-                `Could not place prediction: ${error instanceof Error ? error.message : "try again"}`,
-              ),
-            )
-            .finally(() => setSubmitting(false));
-        }}
-        style={[styles.submit, disabled && styles.disabled]}
-      >
-        <Text style={styles.submitLabel}>
-          {submitting ? "UPDATING LIVE POOL…" : submitLabel}
-        </Text>
-      </Pressable>
-      {receipt ? (
+        </>
+      ) : null}
+      {receipt && !placed ? (
         <Text accessibilityRole="alert" style={styles.receipt}>
           ✓ {receipt}. Your party pool is updated.
         </Text>
@@ -237,6 +264,12 @@ const styles = StyleSheet.create({
     color: colors.brandDeep,
     fontWeight: "800",
     lineHeight: 20,
+    marginTop: spacing.md,
+  },
+  position: {
+    color: colors.brandDeep,
+    fontSize: 13,
+    fontWeight: "900",
     marginTop: spacing.md,
   },
 });

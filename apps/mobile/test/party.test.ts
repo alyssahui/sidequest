@@ -58,7 +58,9 @@ describe("global chrome", () => {
     expect(layout).toContain("CasinoChipBar");
     expect(tabs).toContain("height: 24");
     expect(tabs).toContain("width: 24");
-    expect(tabs).toContain("map: 20");
-    expect(tabs).toContain("party: 19");
+    expect(tabs).toContain("justifyContent: \"flex-end\"");
+    expect(tabs).toContain("map: 23");
+    expect(tabs).toContain("quests: 18");
+    expect(tabs).toContain("party: 23");
   });
 });

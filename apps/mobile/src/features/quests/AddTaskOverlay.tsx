@@ -55,7 +55,7 @@ export function AddTaskOverlay({
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState(() => toDateInput(starting));
   const [dueTime, setDueTime] = useState(() => toTimeInput(starting));
-  const [friend, setFriend] = useState(friends[0]?.name ?? "Ben");
+  const [friend, setFriend] = useState(friends[0]?.name ?? "Etash");
   const [stake, setStake] = useState(25);
   const [design, setDesign] = useState<QuestDesign | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -142,6 +142,11 @@ export function AddTaskOverlay({
     setWorking("send");
     setError(null);
     try {
+      const recipient =
+        mode === "OWN"
+          ? user
+          : friends.find((candidate) => candidate.name === friend);
+      if (!recipient) throw new Error("Choose a demo party member");
       await onCreate({
         id: `${mode.toLowerCase()}-${Date.now()}`,
         kind: mode,
@@ -151,7 +156,11 @@ export function AddTaskOverlay({
         escrowHeld: true,
         title: title.trim(),
         location: location.trim() || "n/a",
-        person: mode === "OWN" ? "You" : friend,
+        person: mode === "OWN" ? "You" : recipient.name,
+        creatorUserId: user.id,
+        recipientUserId: recipient.id,
+        creatorName: user.name,
+        creatorAvatar: user.avatar,
         description: description.trim(),
         dueAt: due.toISOString(),
         stake,
@@ -178,17 +187,16 @@ export function AddTaskOverlay({
           style={styles.sheet}
         >
           <ScrollView keyboardShouldPersistTaps="handled">
-            <Text style={styles.kicker}>NEW IMPACT MISSION</Text>
+            <Text style={styles.kicker}>NEW</Text>
             <Text accessibilityRole="header" style={styles.title}>
-              What should change?
+              Add a task
             </Text>
-            <Text style={styles.help}>
-              Start with a human need. Grok turns it into a safe, measurable
-              local action; a friend makes the commitment real.
-            </Text>
+            <Text style={styles.help}>Yellow quest or red challenge.</Text>
             <View accessibilityRole="tablist" style={styles.row}>
               {(["OWN", "CHALLENGE"] as const).map((choice) => (
                 <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: mode === choice }}
                   key={choice}
                   onPress={() => setMode(choice)}
                   style={[
@@ -234,7 +242,7 @@ export function AddTaskOverlay({
                 <TextInput
                   accessibilityLabel="Task title"
                   onChangeText={setTitle}
-                  placeholder="e.g. Reduce food waste on our block"
+                  placeholder="What needs doing?"
                   placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={title}
@@ -242,7 +250,7 @@ export function AddTaskOverlay({
                 <TextInput
                   accessibilityLabel="Task location"
                   onChangeText={setLocation}
-                  placeholder="Where can this happen?"
+                  placeholder="Location"
                   placeholderTextColor={colors.muted}
                   style={styles.input}
                   value={location}
@@ -251,7 +259,7 @@ export function AddTaskOverlay({
                   accessibilityLabel="Task description"
                   multiline
                   onChangeText={setDescription}
-                  placeholder="Context, constraints, or who this helps"
+                  placeholder="Short description"
                   placeholderTextColor={colors.muted}
                   style={[styles.input, styles.multiline]}
                   value={description}
@@ -377,6 +385,8 @@ export function AddTaskOverlay({
                     : `You and ${friend} each stake the same amount.`}
                 </Text>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: !valid || Boolean(working) }}
                   disabled={!valid || Boolean(working)}
                   onPress={() => void submit()}
                   style={[

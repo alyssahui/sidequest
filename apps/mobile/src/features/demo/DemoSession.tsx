@@ -13,7 +13,7 @@ import { colors, radii, spacing } from "@sidequest/ui/theme";
 
 export const DEMO_USERS = [
   { id: "user-zuri", name: "Zuri", avatar: "Z" },
-  { id: "user-ben", name: "Ben", avatar: "B" },
+  { id: "user-ben", name: "Etash", avatar: "E" },
   { id: "user-alyssa", name: "Alyssa", avatar: "A" },
 ] as const;
 

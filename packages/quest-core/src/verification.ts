@@ -11,7 +11,13 @@ import { QuestError } from "./errors";
 export interface PhotoReviewPort {
   inspectReference(
     mediaRef: string,
-  ): Promise<{ safe: boolean; accepted?: boolean }>;
+    prompt?: string,
+  ): Promise<{
+    safe: boolean;
+    accepted?: boolean;
+    recommendation?: "MATCH" | "REVIEW" | "RETAKE";
+    code?: string;
+  }>;
 }
 export class VerificationRegistry {
   constructor(
@@ -41,15 +47,25 @@ export class VerificationRegistry {
       }
       if (requirement.type === "GPS") {
         if (!evidence.gps) throw new QuestError("INVALID_EVIDENCE");
-        const result = await this.gps.evaluate({
-          evidence: evidence.gps,
-          target: requirement.target,
-          radiusMeters: requirement.radiusMeters,
-          maxAccuracyMeters: requirement.maxAccuracyMeters,
-          serverNow: now,
-          userId,
-          questInstanceId: questId,
-        });
+        let result;
+        try {
+          result = await this.gps.evaluate({
+            evidence: evidence.gps,
+            target: requirement.target,
+            radiusMeters: requirement.radiusMeters,
+            maxAccuracyMeters: requirement.maxAccuracyMeters,
+            serverNow: now,
+            userId,
+            questInstanceId: questId,
+          });
+        } catch {
+          checks.push({
+            type: "GPS",
+            decision: "PENDING_REVIEW",
+            code: "GPS_SERVICE_UNAVAILABLE",
+          });
+          continue;
+        }
         checks.push({
           type: "GPS",
           decision: result.accepted ? "VERIFIED" : "FAILED",
@@ -60,24 +76,37 @@ export class VerificationRegistry {
       if (!evidence.photo) throw new QuestError("INVALID_EVIDENCE");
       if (!/^media:\/\/[a-zA-Z0-9/_-]{1,180}$/.test(evidence.photo.mediaRef))
         throw new QuestError("PHOTO_REFERENCE_UNSAFE");
-      const review = await this.photos.inspectReference(
-        evidence.photo.mediaRef,
-      );
+      let review: Awaited<ReturnType<PhotoReviewPort["inspectReference"]>>;
+      try {
+        review = await this.photos.inspectReference(
+          evidence.photo.mediaRef,
+          requirement.prompt,
+        );
+      } catch {
+        review = {
+          safe: true,
+          recommendation: "REVIEW",
+          code: "PHOTO_SERVICE_UNAVAILABLE",
+        };
+      }
       if (!review.safe) throw new QuestError("PHOTO_REFERENCE_UNSAFE");
+      const assisted = review.recommendation !== undefined;
       checks.push({
         type: "PHOTO",
-        decision:
-          review.accepted === true
+        decision: assisted
+          ? "PENDING_REVIEW"
+          : review.accepted === true
             ? "VERIFIED"
             : review.accepted === false
               ? "FAILED"
               : "PENDING_REVIEW",
         code:
-          review.accepted === true
+          review.code ??
+          (review.accepted === true
             ? "PHOTO_DEMO_ACCEPTED"
             : review.accepted === false
               ? "PHOTO_REJECTED"
-              : "PHOTO_REVIEW_REQUIRED",
+              : "PHOTO_REVIEW_REQUIRED"),
       });
     }
     const decision = checks.some((c) => c.decision === "FAILED")

@@ -13,6 +13,7 @@
     "@sidequest/contracts": "workspace:*",
     "@sidequest/location": "workspace:*",
     "@sidequest/quest-core": "workspace:*",
+    "@sidequest/market-core": "workspace:*",
     "fastify": "^5.12.4"
   },
   "devDependencies": {

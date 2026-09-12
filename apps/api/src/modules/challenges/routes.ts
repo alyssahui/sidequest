@@ -1,6 +1,9 @@
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import { QuestError } from "@sidequest/quest-core";
 import { demoChallengeService } from "../quests/demo";
+type ChallengeRoutesOptions = {
+  service?: typeof demoChallengeService;
+};
 const idempotency = (h: Record<string, unknown>) =>
   typeof h["idempotency-key"] === "string" ? h["idempotency-key"] : "";
 const fail = (reply: FastifyReply, e: unknown) => {
@@ -15,11 +18,12 @@ const fail = (reply: FastifyReply, e: unknown) => {
     )
     .send({ code, message: code });
 };
-export const challengeRoutes: FastifyPluginAsync = async (app) => {
+export const challengeRoutes: FastifyPluginAsync<
+  ChallengeRoutesOptions
+> = async (app, options) => {
+  const service = options.service ?? demoChallengeService;
   app.get("/challenges", async (request) => {
-    const challenges = await demoChallengeService.list(
-      request.principal.userId,
-    );
+    const challenges = await service.list(request.principal.userId);
     return {
       incoming: challenges.filter(
         (challenge) => challenge.recipientUserId === request.principal.userId,
@@ -39,7 +43,7 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
         notes?: string;
         deadline: string;
       };
-      return demoChallengeService.assessDraft(body);
+      return service.assessDraft(body);
     } catch (error) {
       return fail(reply, error);
     }
@@ -54,7 +58,7 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
         notes?: string;
         deadline: string;
       };
-      return await demoChallengeService.issueCustom({
+      return await service.issueCustom({
         ...body,
         issuerUserId: request.principal.userId,
         idempotencyKey: idempotency(request.headers),
@@ -72,7 +76,7 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
         stakeCoins: number;
         expiresAt: string;
       };
-      return await demoChallengeService.issue({
+      return await service.issue({
         ...b,
         issuerUserId: request.principal.userId,
         idempotencyKey: idempotency(request.headers),
@@ -84,7 +88,7 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
   app.post("/challenges/:id/respond", async (request, reply) => {
     try {
       const b = request.body as { accept: boolean; expectedVersion: number };
-      return await demoChallengeService.respond({
+      return await service.respond({
         challengeId: (request.params as { id: string }).id,
         recipientUserId: request.principal.userId,
         ...b,
@@ -100,7 +104,7 @@ export const challengeRoutes: FastifyPluginAsync = async (app) => {
         progressPercent: number;
         expectedVersion: number;
       };
-      return await demoChallengeService.updateProgress({
+      return await service.updateProgress({
         challengeId: (request.params as { id: string }).id,
         recipientUserId: request.principal.userId,
         ...body,

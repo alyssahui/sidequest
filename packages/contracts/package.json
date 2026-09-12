@@ -5,10 +5,13 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./challenge": "./src/challenge.ts",
     "./events": "./src/events.ts",
     "./foundation": "./src/foundation.ts",
     "./location": "./src/location.ts",
-    "./navigation": "./src/navigation.ts"
+    "./market": "./src/market.ts",
+    "./navigation": "./src/navigation.ts",
+    "./quest": "./src/quest.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"

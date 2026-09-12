@@ -3,6 +3,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { CoinAmount, HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, radii, spacing, typeScale } from "@sidequest/ui/theme";
 import { ScreenFrame } from "../shell/ScreenFrame";
+import {
+  PredictionMarketCard,
+  SelfBountyCard,
+} from "../markets/PredictionMarketCard";
 import { ChallengeCard } from "../challenges/ChallengeCard";
 import {
   ChallengeComposer,
@@ -62,7 +66,15 @@ export function QuestsScreen() {
       </View>
       <QuestStatePanel state={state} onAction={() => setState("ready")} />
       {state === "ready" && section === "ACTIVE" ? (
-        <Active custom={customActive} onVerify={() => setState("complete")} />
+        <>
+          <Active custom={customActive} onVerify={() => setState("complete")} />
+          <SelfBountyCard balance={420} />
+          <PredictionMarketCard
+            balance={420}
+            closesLabel="47 minutes remaining"
+            participantName="Ben"
+          />
+        </>
       ) : null}
       {state === "ready" && section === "NEARBY" ? (
         <>

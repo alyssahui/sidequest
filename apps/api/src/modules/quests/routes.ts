@@ -2,6 +2,10 @@ import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import type { EvidenceSubmission, SpawnContext } from "@sidequest/contracts";
 import { DEMO_TEMPLATES, QuestError } from "@sidequest/quest-core";
 import { demoQuestServices, seedQuestDemo } from "./demo";
+type QuestRoutesOptions = {
+  services?: typeof demoQuestServices;
+  seed?: typeof seedQuestDemo;
+};
 const key = (headers: Record<string, unknown>) =>
   typeof headers["idempotency-key"] === "string"
     ? headers["idempotency-key"]
@@ -22,18 +26,22 @@ const fail = (reply: FastifyReply, error: unknown) => {
     retryable: ["VERSION_CONFLICT", "EXPIRED"].includes(code),
   });
 };
-export const questRoutes: FastifyPluginAsync = async (app) => {
-  await seedQuestDemo();
+export const questRoutes: FastifyPluginAsync<QuestRoutesOptions> = async (
+  app,
+  options,
+) => {
+  const services = options.services ?? demoQuestServices;
+  await (options.seed ?? seedQuestDemo)();
   app.get("/quests", async (request) =>
-    demoQuestServices.quests.list(request.principal.userId),
+    services.quests.list(request.principal.userId),
   );
   app.get("/quests/impact", async (request) =>
-    demoQuestServices.quests.impact(request.principal.userId),
+    services.quests.impact(request.principal.userId),
   );
   app.post("/quests/spawn", async (request, reply) => {
     try {
       const b = request.body as { templateId: string; expiresAt: string };
-      return await demoQuestServices.quests.spawn({
+      return await services.quests.spawn({
         ...b,
         ownerUserId: request.principal.userId,
         partyId: request.principal.partyIds[0],
@@ -44,13 +52,13 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
     }
   });
   app.post("/quests/:id/accept", async (request, reply) =>
-    command(request, reply, "accept"),
+    command(services, request, reply, "accept"),
   );
   app.post("/quests/:id/start", async (request, reply) =>
-    command(request, reply, "start"),
+    command(services, request, reply, "start"),
   );
   app.post("/quests/:id/dismiss", async (request, reply) =>
-    command(request, reply, "dismiss"),
+    command(services, request, reply, "dismiss"),
   );
   app.post("/quests/:id/evidence", async (request, reply) => {
     try {
@@ -58,7 +66,7 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
         expectedVersion: number;
         evidence: EvidenceSubmission;
       };
-      return await demoQuestServices.quests.submitEvidence({
+      return await services.quests.submitEvidence({
         questId: (request.params as { id: string }).id,
         actorUserId: request.principal.userId,
         expectedVersion: b.expectedVersion,
@@ -72,7 +80,7 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
   app.post("/quests/:id/photo-review", async (request, reply) => {
     try {
       const b = request.body as { attemptId: string; accepted: boolean };
-      return await demoQuestServices.quests.reviewPhoto({
+      return await services.quests.reviewPhoto({
         questId: (request.params as { id: string }).id,
         attemptId: b.attemptId,
         accepted: b.accepted,
@@ -85,9 +93,9 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
   });
   app.get("/quest-suggestions", async (request) => {
     const q = request.query as Partial<SpawnContext>;
-    const now = demoQuestServices.clock.now().toISOString();
+    const now = services.clock.now().toISOString();
     return {
-      suggestions: demoQuestServices.spawning.suggest(
+      suggestions: services.spawning.suggest(
         {
           userId: request.principal.userId,
           now,
@@ -111,7 +119,7 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     "/quest-items",
     async (request) =>
-      (await demoQuestServices.quests.list(request.principal.userId)).items,
+      (await services.quests.list(request.principal.userId)).items,
   );
   app.post("/quest-items", async (request, reply) => {
     try {
@@ -120,7 +128,7 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
         text: string;
         tags?: string[];
       };
-      return await demoQuestServices.quests.addItem({
+      return await services.quests.addItem({
         ownerUserId: request.principal.userId,
         kind: b.kind,
         text: b.text,
@@ -133,13 +141,14 @@ export const questRoutes: FastifyPluginAsync = async (app) => {
   });
 };
 async function command(
+  services: typeof demoQuestServices,
   request: any,
   reply: FastifyReply,
   action: "accept" | "start" | "dismiss",
 ) {
   try {
     const b = request.body as { expectedVersion: number };
-    return await demoQuestServices.quests[action]({
+    return await services.quests[action]({
       questId: request.params.id,
       actorUserId: request.principal.userId,
       expectedVersion: b.expectedVersion,

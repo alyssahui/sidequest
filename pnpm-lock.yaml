@@ -228,6 +228,9 @@ importers:
       "@sidequest/location":
         specifier: workspace:*
         version: link:../../packages/location
+      "@sidequest/market-core":
+        specifier: workspace:*
+        version: link:../../packages/market-core
       "@sidequest/quest-core":
         specifier: workspace:*
         version: link:../../packages/quest-core
@@ -253,6 +256,9 @@ importers:
       "@sidequest/location":
         specifier: workspace:*
         version: link:../../packages/location
+      "@sidequest/market-core":
+        specifier: workspace:*
+        version: link:../../packages/market-core
       "@sidequest/ui":
         specifier: workspace:*
         version: link:../../packages/ui
@@ -328,6 +334,16 @@ importers:
       "@sidequest/contracts":
         specifier: workspace:*
         version: link:../contracts
+
+  packages/market-core:
+    dependencies:
+      "@sidequest/contracts":
+        specifier: workspace:*
+        version: link:../contracts
+    devDependencies:
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
 
   packages/quest-core:
     dependencies:

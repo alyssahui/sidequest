@@ -3,6 +3,10 @@ import { StyleSheet, Text, View } from "react-native";
 import { HudCard, StatusPill } from "@sidequest/ui/components";
 import { colors, spacing, typeScale } from "@sidequest/ui/theme";
 
+import {
+  PredictionMarketCard,
+  SelfBountyCard,
+} from "../markets/PredictionMarketCard";
 import { ScreenFrame } from "./ScreenFrame";
 
 export function QuestsScreen() {
@@ -22,6 +26,11 @@ export function QuestsScreen() {
           pressure—skip anytime.
         </Text>
       </HudCard>
+      <SelfBountyCard />
+      <PredictionMarketCard
+        participantName="Ben"
+        closesLabel="47 minutes remaining"
+      />
       <StatusPill label="NEARBY · 3" />
       <HudCard accessibilityLabel="Nearby quest: Something is happening nearby">
         <Text style={styles.title}>Something is happening nearby.</Text>

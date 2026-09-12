@@ -3,8 +3,8 @@ services:
     name: sidequest-demo
     runtime: node
     plan: free
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build:web
-    startCommand: SERVE_WEB=true corepack pnpm --filter @sidequest/api start
+    buildCommand: npm install --global pnpm@12.4.1 && pnpm install --frozen-lockfile && pnpm build:web
+    startCommand: SERVE_WEB=true pnpm --filter @sidequest/api start
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
